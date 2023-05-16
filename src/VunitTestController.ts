@@ -15,6 +15,7 @@ export class VunitTestController {
 
     //specific members
     private mTestController : vscode.TestController;
+    private mRunProfile : vscode.TestRunProfile;
     private mWorkSpacePath : string = "";
 
     //--------------------------------------------
@@ -32,6 +33,8 @@ export class VunitTestController {
         // create TestController for VUnit
         this.mTestController = vscode.tests.createTestController('vunit-test-controller', 'VUnit TestController');
         this.mContext.subscriptions.push(this.mTestController);
+
+        this.mRunProfile = this.mTestController.createRunProfile('Run', vscode.TestRunProfileKind.Run, request => this.RunTests(request), true);
 
         // this.mTestController.resolveHandler = test => {
         //     this.mTestController.items.replace( );
