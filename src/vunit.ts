@@ -49,7 +49,10 @@ export async function getVunitVersion(): Promise<string> {
                 });
         })
             .then(() => {
-                resolve(version);
+                if(version)
+                {
+                    resolve(version); 
+                }
             })
             .catch((err) => {
                 reject(new Error(err));
