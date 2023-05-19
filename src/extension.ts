@@ -11,7 +11,11 @@ import { VUnitAdapter } from './adapter';
 import * as path from 'path';
 import * as fs from 'fs';
 
+import { VunitTestController } from './VunitTestController';
+
 export async function activate(context: vscode.ExtensionContext) {
+
+    /*
     const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];
     const workDir = path.join(context.globalStoragePath, 'workdir');
     fs.mkdirSync(workDir, { recursive: true });
@@ -38,9 +42,8 @@ export async function activate(context: vscode.ExtensionContext) {
             )
         );
     }
-
-    // create TestController for VUnit
-    const controller = vscode.tests.createTestController('vunit-test-controller', 'VUnit TestController');
-	context.subscriptions.push(controller);
+    */
+    
+    let testController : VunitTestController = new VunitTestController(context);
     
 }

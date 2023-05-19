@@ -29,7 +29,7 @@
         "test explorer"
     ],
     "activationEvents": [
-        "*"
+        "onLanguage:vhdl"
     ],
     "main": "./out/extension.js",
     "contributes": {

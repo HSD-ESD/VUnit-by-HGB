@@ -44,22 +44,17 @@ export class VunitTestController {
 
     public async RunTests(request : vscode.TestRunRequest)
     {
+        //this.mTestController.items.replace(vunit.loadVunitTests(this.mWorkSpacePath))
+
         const run = this.mTestController.createTestRun(request);
 
         if (request.include) {
-            await Promise.all(request.include.map(t => runNode(t, request, run)));
+            await Promise.all(request.include.map(t => vunit.runNode(t, request, run)));
         } else {
-            await Promise.all(mapTestItems(this.mTestController.items, t => runNode(t, request, run)));
+            await Promise.all(vunit.mapTestItems(this.mTestController.items, t => vunit.runNode(t, request, run)));
         }
     
         run.end();
     }
 
-}
-
-// Small helper that works like "array.map" for children of a test collection
-const mapTestItems = <T>(items: vscode.TestItemCollection, mapper: (t: vscode.TestItem) => T): T[] => {
-	const result: T[] = [];
-	items.forEach(t => result.push(mapper(t)));
-	return result;
 }
