@@ -1,4 +1,5 @@
 //specific imports
+import { VUnit } from "./VUnit/VUnit";
 import * as vunit from "./vunit";
 
 //general imports
@@ -17,6 +18,7 @@ export class VunitTestController {
     private mTestController : vscode.TestController;
     private mRunProfile : vscode.TestRunProfile;
     private mWorkSpacePath : string = "";
+    private mVunit : VUnit;
 
     //--------------------------------------------
 	//Public Methods
@@ -27,6 +29,8 @@ export class VunitTestController {
         this.mContext = context;
 
         //initialize specific members
+        this.mVunit = new VUnit();
+
         const workSpacePath = vunit.getWorkspaceRoot();
         if(workSpacePath) { this.mWorkSpacePath = workSpacePath; }
 
@@ -46,7 +50,7 @@ export class VunitTestController {
     {
         //this.mTestController.items.replace(vunit.loadVunitTests(this.mWorkSpacePath))
 
-        const run = this.mTestController.createTestRun(request);
+        const run : vscode.TestRun = this.mTestController.createTestRun(request);
 
         if (request.include) {
             await Promise.all(request.include.map(t => vunit.runNode(t, request, run)));
