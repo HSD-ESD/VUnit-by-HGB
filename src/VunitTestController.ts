@@ -5,6 +5,7 @@ import { VunitExportData } from "./VUnit/VUnitPackage";
 
 //general imports
 import * as vscode from 'vscode';
+import * as path from 'path';
 import exp = require("constants");
 
 export class VunitTestController {
@@ -86,25 +87,51 @@ export class VunitTestController {
         }
 
         // create items for each found run.py
-        this.mVunit.FindRunPy((vscode.workspace.workspaceFolders || [])[0]);
+        const RunPyFiles : string[] = await this.mVunit.FindRunPy((vscode.workspace.workspaceFolders || [])[0]);
 
-        //only temporary
-        const exportData: VunitExportData = await this.mVunit.GetVunitData(this.mWorkSpacePath);
-
-        let tbFiles: string[] = [];
-
-        for(const testcase of exportData.tests)
+        for(const RunPy of RunPyFiles)
         {
-            let split = testcase.name.split('.');
-            let libraryName = split[0];
-            let testBenchName = split[1];
-            let testCaseName = split.slice(2).join('.');
+            // get data for each run.py-file
+            const exportData: VunitExportData = await this.mVunit.GetVunitData(this.mWorkSpacePath);
 
-            let item : vscode.TestItem = this.mTestController.createTestItem(testcase.name, testCaseName);
-            
-            this.mTestController.items.add(item);
+            let runPyItem : vscode.TestItem = this.mTestController.createTestItem(RunPy, path.relative(this.mWorkSpacePath, RunPy));
+            this.mTestController.items.add(runPyItem);
+
+            for(const testcase of exportData.tests)
+            {
+                // split testcase-string into tokens
+                let split = testcase.name.split('.');
+                let libraryName = split[0];
+                let testBenchName = split[1];
+                let testCaseName = split.slice(2).join('.');
+
+                // get item of library
+                let libraryItem : vscode.TestItem | undefined = runPyItem.children.get(libraryName);
+
+                // create node for library if not existing yet
+                if (!libraryItem)
+                {
+                    libraryItem = this.mTestController.createTestItem(libraryName, libraryName);
+                    runPyItem.children.add(libraryItem);
+                }
+
+                // get item of testbench
+                let testBenchItem : vscode.TestItem | undefined = runPyItem.children.get(testBenchName);
+                
+                //create node for testbench if not existing yet
+                if (!testBenchItem)
+                {
+                    testBenchItem = this.mTestController.createTestItem(testBenchName, testBenchName);
+                    libraryItem.children.add(testBenchItem);
+                }
+
+                //create node for testcase
+                let testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testcase.name, testCaseName);
+                testBenchItem.children.add(testCaseItem);
+
+            }
+
         }
-
     }
 
 
