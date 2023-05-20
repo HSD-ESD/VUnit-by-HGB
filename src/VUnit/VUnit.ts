@@ -78,11 +78,8 @@ export class VUnit {
         });
         return runPy;
     }
-
-    //--------------------------------------------
-	//Private Methods
-	//--------------------------------------------
-    private async RunVunit(
+    
+    public async RunVunit(
         vunitArgs: string[],
         vunitProcess: (vunit: ChildProcess) => void = () => {}
     ): Promise<string> {
