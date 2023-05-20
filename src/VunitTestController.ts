@@ -94,9 +94,14 @@ export class VunitTestController {
             // get data for each run.py-file
             const exportData: VunitExportData = await this.mVunit.GetVunitData(this.mWorkSpacePath);
 
-            let runPyItem : vscode.TestItem = this.mTestController.createTestItem(RunPy, path.relative(this.mWorkSpacePath, RunPy));
+            //relative path from workspace-folder to run-py-file 
+            const RunPyPath : string = path.relative(this.mWorkSpacePath, RunPy);
+
+            //create test-item for selected run.py
+            let runPyItem : vscode.TestItem = this.mTestController.createTestItem(RunPy,RunPyPath);
             this.mTestController.items.add(runPyItem);
 
+            // add all testcases to specified run.py-testcase-item
             for(const testcase of exportData.tests)
             {
                 // split testcase-string into tokens
@@ -116,7 +121,7 @@ export class VunitTestController {
                 }
 
                 // get item of testbench
-                let testBenchItem : vscode.TestItem | undefined = runPyItem.children.get(testBenchName);
+                let testBenchItem : vscode.TestItem | undefined = libraryItem.children.get(testBenchName);
                 
                 //create node for testbench if not existing yet
                 if (!testBenchItem)
@@ -126,7 +131,7 @@ export class VunitTestController {
                 }
 
                 //create node for testcase
-                let testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testcase.name, testCaseName);
+                const testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testcase.name, testCaseName);
                 testBenchItem.children.add(testCaseItem);
 
             }

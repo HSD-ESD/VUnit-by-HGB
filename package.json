@@ -1,18 +1,18 @@
 {
-    "name": "vunit-test-explorer",
-    "displayName": "VUnit Test Explorer",
+    "name": "vunit-by-hgb",
+    "displayName": "VUnit by HGB",
     "description": "Run your VUnit tests from the sidebar",
-    "author": "Henrik Bohlin",
-    "publisher": "hbohlin",
+    "author": "jakobjung10",
+    "publisher": "jakobjung10",
     "license": "SEE LICENSE IN LICENSE",
     "version": "0.4.0",
     "preview": true,
     "repository": {
         "type": "git",
-        "url": "https://github.com/Bochlin/vunit-test-explorer"
+        "url": "https://github.com/jakobjung10/vunit-by-hgb"
     },
     "engines": {
-        "vscode": "^1.44.0"
+        "vscode": "^1.59.0"
     },
     "categories": [
         "Other"
