@@ -111,27 +111,30 @@ export class VunitTestController {
                 let testCaseName = split.slice(2).join('.');
 
                 // get item of library
-                let libraryItem : vscode.TestItem | undefined = runPyItem.children.get(libraryName);
+                const libraryID = RunPyPath.concat(".", libraryName);
+                let libraryItem : vscode.TestItem | undefined = runPyItem.children.get(libraryID);
 
                 // create node for library if not existing yet
                 if (!libraryItem)
                 {
-                    libraryItem = this.mTestController.createTestItem(libraryName, libraryName);
+                    libraryItem = this.mTestController.createTestItem(libraryID, libraryName);
                     runPyItem.children.add(libraryItem);
                 }
 
                 // get item of testbench
-                let testBenchItem : vscode.TestItem | undefined = libraryItem.children.get(testBenchName);
+                const testBenchID = RunPyPath.concat(".", testBenchName);
+                let testBenchItem : vscode.TestItem | undefined = libraryItem.children.get(testBenchID);
                 
                 //create node for testbench if not existing yet
                 if (!testBenchItem)
                 {
-                    testBenchItem = this.mTestController.createTestItem(testBenchName, testBenchName);
+                    testBenchItem = this.mTestController.createTestItem(testBenchID, testBenchName);
                     libraryItem.children.add(testBenchItem);
                 }
 
                 //create node for testcase
-                const testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testcase.name, testCaseName);
+                const testCaseID = RunPyPath.concat(".", testcase.name);
+                const testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testCaseID, testCaseName);
                 testBenchItem.children.add(testCaseItem);
 
             }
@@ -170,7 +173,7 @@ export async function runNode(
         run.started(node);
 
         
-        
+        run.end;
     }
 }
 
