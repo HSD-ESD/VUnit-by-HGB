@@ -267,39 +267,6 @@ function findNode(
     return undefined;
 }
 
-// @ added by Jakob
-export async function runNode(
-    node: vscode.TestItem,
-	request: vscode.TestRunRequest,
-	run: vscode.TestRun,
-): Promise<void> {
-
-    // check for filter on test
-    if (request.exclude?.includes(node)) {
-		return;
-	}
-
-    if (node.children.size > 0) 
-    {
-        // recurse and run all children if this is a "suite"
-		await Promise.all(mapTestItems(node.children, t => runNode(t, request, run)));
-    }
-    else
-    {
-        run.started(node);
-
-        
-    }
-}
-
-// @ added by Jakob
-// Small helper that works like "array.map" for children of a test collection
-export const mapTestItems = <T>(items: vscode.TestItemCollection, mapper: (t: vscode.TestItem) => T): T[] => {
-	const result: T[] = [];
-	items.forEach(t => result.push(mapper(t)));
-	return result;
-};
-
 
 export function getWorkspaceRoot(): string | undefined {
     const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];

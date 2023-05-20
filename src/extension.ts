@@ -46,4 +46,5 @@ export async function activate(context: vscode.ExtensionContext) {
     
     let testController : VunitTestController = new VunitTestController(context);
     
+    testController.LoadTests();
 }

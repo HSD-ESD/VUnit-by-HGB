@@ -1,4 +1,10 @@
+//use
 'use strict';
+
+//specific imports
+import {VunitExportData} from './VUnitPackage';
+
+//general imports
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -6,6 +12,19 @@ import { ChildProcess, spawn } from 'child_process';
 import kill = require('tree-kill');
 import readline = require('readline');
 import uuid = require('uuid-random');
+
+//--------------------------------------------
+//module-internal Constants
+//--------------------------------------------
+const emptyVunitExportData : VunitExportData = {
+    export_format_version: {
+        major: 1,
+        minor: 0,
+        patch: 0,
+    },
+    files: [],
+    tests: [],
+};
 
 export class VUnit {
 
@@ -145,9 +164,35 @@ export class VUnit {
         });
     }
 
+    public async GetVunitData(workDir: string): Promise<VunitExportData> {
+        const vunitJson = path.join(workDir, `${uuid()}.json`);
+        fs.mkdirSync(path.dirname(vunitJson), { recursive: true });
+    
+        let vunitData: VunitExportData = emptyVunitExportData;
+        let options = ['--list', `--export-json ${vunitJson}`];
+        const vunitExportJsonOptions = vscode.workspace
+            .getConfiguration()
+            .get('vunit.exportJsonOptions');
+        if (vunitExportJsonOptions) {
+            options.push(vunitExportJsonOptions as string);
+        }
+        await this.RunVunit(options)
+            .then(() => {
+                vunitData = JSON.parse(fs.readFileSync(vunitJson, 'utf-8'));
+                fs.unlinkSync(vunitJson);
+            })
+            .catch((err) => {
+                vunitData = emptyVunitExportData;
+            });
+        return vunitData;
+    }
+
+
 }
 
+//--------------------------------------------
 //Helper-Functions
+//--------------------------------------------
 export function getWorkspaceRoot(): string | undefined {
     const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];
     let wsRoot: string | undefined = undefined;
