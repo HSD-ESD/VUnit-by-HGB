@@ -1,6 +1,5 @@
 //specific imports
 import { VUnit } from "./VUnit/VUnit";
-import * as vunit from "./vunit";
 import { VunitExportData } from "./VUnit/VUnitPackage";
 
 //general imports
@@ -28,8 +27,6 @@ export class VunitTestController {
     private mWorkSpacePath : string = "";
     private mVunit : VUnit;
 
-    private mVunitProcess! : any;
-
     //--------------------------------------------
 	//Public Methods
 	//--------------------------------------------
@@ -37,13 +34,13 @@ export class VunitTestController {
 
         //initialize vs-code-members
         this.mContext = context;
-        this.mOutputChannel = vscode.window.createOutputChannel("VUnitTestController");
+        this.mOutputChannel = vscode.window.createOutputChannel("VUnitByHGB.VUnitTestController");
 
         //initialize specific members
         this.mVunit = new VUnit();
 
         //get workspace-path of extension
-        const workSpacePath = vunit.getWorkspaceRoot();
+        const workSpacePath = this.mVunit.GetWorkspaceRoot(); 
         if(workSpacePath) { this.mWorkSpacePath = workSpacePath; }
 
         // create TestController for VUnit
@@ -74,7 +71,7 @@ export class VunitTestController {
             await Promise.all(mapTestItems(this.mTestController.items, t => this.runNode(t, request, run)));
         }
     
-        run.end();
+        //run.end();
     }
 
     public async LoadTests()
@@ -116,7 +113,7 @@ export class VunitTestController {
                 let testCaseName = split.slice(2).join('.');
 
                 // get item of library
-                const libraryID = RunPyPath.concat(".", libraryName);
+                const libraryID = RunPyPath.concat("|", libraryName);
                 let libraryItem : vscode.TestItem | undefined = runPyItem.children.get(libraryID);
 
                 // create node for library if not existing yet
@@ -127,7 +124,7 @@ export class VunitTestController {
                 }
 
                 // get item of testbench
-                const testBenchID = RunPyPath.concat(".", testBenchName);
+                const testBenchID = RunPyPath.concat("|", testBenchName);
                 let testBenchItem : vscode.TestItem | undefined = libraryItem.children.get(testBenchID);
                 
                 //create node for testbench if not existing yet
@@ -138,8 +135,8 @@ export class VunitTestController {
                 }
 
                 //create node for testcase
-                    //const testCaseID = RunPyPath.concat(".", testcase.name);
-                const testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testcase.name, testCaseName);
+                const testCaseID = RunPyPath.concat("|", testcase.name);
+                const testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testCaseID, testCaseName);
                 testBenchItem.children.add(testCaseItem);
 
             }
@@ -147,7 +144,7 @@ export class VunitTestController {
         }
     }
 
-    // @ added by Jakob
+    
     private async runNode(
         node: vscode.TestItem,
 	    request: vscode.TestRunRequest,
@@ -162,62 +159,103 @@ export class VunitTestController {
         if (node.children.size > 0) 
         {
             // recurse and run all children if this is a "suite"
-            await Promise.all(mapTestItems(node.children, t => this.runNode(t, request, run)));
+            Promise.all(mapTestItems(node.children, t => this.runNode(t, request, run)));
         }
         else
         {
-            const testCaseWildCard : string = '"' + node.id + '"';
-            let options = [testCaseWildCard, '--no-color', '--exit-0'];
-            const vunitOptions = vscode.workspace
-                .getConfiguration()
-                .get('vunit.options');
-            if (vunitOptions) {
-                options.push(vunitOptions as string);
-            }   
-
-            await this.mVunit.RunVunit(options, (vunit: ChildProcess) => {
-                this.mVunitProcess = vunit;
-                const testStart = /Starting (.*)/;
-                const testEnd = /(pass|fail) \(.*\) (.*) \(.*\)/;
-                readline
-                    .createInterface({
-                        input: this.mVunitProcess.stdout,
-                        terminal: false,
-                    })
-                    .on('line', (line: string) => {
-                        let start = testStart.exec(line);
-                        if (start) {
-                            run.started(node);
-                        }
-                        let result = testEnd.exec(line);
-                        if (result) {
-
-                            const message : vscode.TestMessage = new vscode.TestMessage("failed");
-
-                            //evaluate result
-                            result[1] === 'pass' ? run.passed(node) : run.failed(node, message);
-                        }
-                    });
-            }).finally(() => {
-                this.mVunitProcess = null;
-            });
+            if (request.profile?.kind === vscode.TestRunProfileKind.Run)
+            {
+                this.RunVunitTestDefault(node, run);
+            }
+            else if (request.profile?.kind === vscode.TestRunProfileKind.Debug)
+            {
+                this.RunVunitTestGUI(node, run);
+            }
 
         }
     }
 
+    private async RunVunitTestDefault(node: vscode.TestItem, run: vscode.TestRun)
+    {
+        //Extract testcase-name from testcase-ID
+        const testCaseWildCard : string = '"' + node.id.split('|')[1] + '"';
+        //Command-Line-Arguments for VUnit
+        let options = [testCaseWildCard, '--no-color', '--exit-0'];
+
+        const vunitOptions = vscode.workspace
+            .getConfiguration()
+            .get('vunit.options');
+        if (vunitOptions) {
+            options.push(vunitOptions as string);
+        }   
+
+        //signal for start of test-case in User-Interface
+        run.started(node);
+
+        //variable for referencing output from vunit-process to analyse its output
+        let vunitProcess : any;
+
+        //launch vunit-process with given arguments from above
+        await this.mVunit.RunVunit(options, (vunit: ChildProcess) => {
+
+            vunitProcess = vunit;
+
+            //this.mVunitProcess = vunit;
+            const testStart = /Starting (.*)/;
+            const testEnd = /(pass|fail) \(.*\) (.*) \(.*\)/;
+            readline
+                .createInterface({
+                    input: vunitProcess.stdout,
+                    terminal: false,
+                })
+                .on('line', (line: string) => {
+                    let start = testStart.exec(line);
+                    if (start) 
+                    {
+                        //...
+                    }
+                    let result = testEnd.exec(line);
+                    if (result) {
+
+                        const message : vscode.TestMessage = new vscode.TestMessage("failed");
+
+                        //evaluate result
+                        result[1] === 'pass' ? run.passed(node) : run.failed(node, message);
+                    }
+                });
+        }).finally(() => {
+            vunitProcess = 0;
+        });
+
+    }
+
+    private async RunVunitTestGUI(node: vscode.TestItem, run: vscode.TestRun)
+    {
+        //signal for start of test-case in User-Interface
+        run.started(node);
+
+        //Command-Line-Arguments for VUnit
+        const testCaseWildCard : string = '"' + node.id.split('|')[1] + '"';
+        let options = [testCaseWildCard, '--no-color', '--exit-0', '-g'];
+
+        const vunitOptions = vscode.workspace
+            .getConfiguration()
+            .get('vunit.guiOptions');
+        if (vunitOptions) {
+            options.push(vunitOptions as string);
+        }
+        
+        await this.mVunit.RunVunit(options);
+    }
 
 }
-
-
 
 //--------------------------------------------
 //Helper Methods
 //--------------------------------------------
 
-
-
 // Small helper that works like "array.map" for children of a test collection
-export const mapTestItems = <T>(items: vscode.TestItemCollection, mapper: (t: vscode.TestItem) => T): T[] => {
+const mapTestItems = <T>(items: vscode.TestItemCollection, mapper: (t: vscode.TestItem) => T): T[] => {
 	const result: T[] = [];
 	items.forEach(t => result.push(mapper(t)));
 	return result;

@@ -37,7 +37,7 @@ export class VUnit {
 	//Public Methods
 	//--------------------------------------------
     public constructor() {
-        this.mOutputChannel = vscode.window.createOutputChannel("VUnit");
+        this.mOutputChannel = vscode.window.createOutputChannel("VUnitByHGB.VUnit");
     }
 
     public async GetVunitVersion(): Promise<string> {
@@ -78,51 +78,60 @@ export class VUnit {
         });
         return runPy;
     }
-    
+
     public async RunVunit(
         vunitArgs: string[],
         vunitProcess: (vunit: ChildProcess) => void = () => {}
     ): Promise<string> {
-        const runPy = await this.GetRunPy();
-        return new Promise((resolve, reject) => {
-            if (!getWorkspaceRoot()) {
-                return reject(new Error('Workspace root not defined.'));
-            } else if (!runPy) {
-                return reject(
-                    new Error('Unable to determine path of VUnit run script.')
-                );
-            } else if (!fs.existsSync(runPy)) {
-                return reject(Error(`VUnit run script ${runPy} does not exist.`));
-            }
-            const python = vscode.workspace
-                .getConfiguration()
-                .get('vunit.python') as string;
-            const args = ['"' + runPy + '"'].concat(vunitArgs);
-            this.mOutputChannel.appendLine('');
-            this.mOutputChannel.appendLine('===========================================');
-            this.mOutputChannel.appendLine('Running VUnit: ' + python + ' ' + args.join(' '));
-            let vunit = spawn(python, args, {
-                cwd: path.dirname(runPy),
-                shell: true,
-            });
-            vunit.on('close', (code) => {
-                if (code === 0) {
-                    this.mOutputChannel.appendLine('\nFinished with exit code 0');
-                    resolve(code.toString());
-                } else {
-                    let msg = `VUnit returned with non-zero exit code (${code}).`;
-                    this.mOutputChannel.appendLine('\n' + msg);
-                    reject(new Error(msg));
+        try{
+
+            const runPy = await this.GetRunPy();
+            return new Promise((resolve, reject) => {
+                if (!this.GetWorkspaceRoot()) {
+                    return reject(new Error('Workspace root not defined.'));
+                } else if (!runPy) {
+                    return reject(
+                        new Error('Unable to determine path of VUnit run script.')
+                    );
+                } else if (!fs.existsSync(runPy)) {
+                    return reject(Error(`VUnit run script ${runPy} does not exist.`));
                 }
+                const python = vscode.workspace
+                    .getConfiguration()
+                    .get('vunit.python') as string;
+                const args = ['"' + runPy + '"'].concat(vunitArgs);
+                this.mOutputChannel.appendLine('');
+                this.mOutputChannel.appendLine('===========================================');
+                this.mOutputChannel.appendLine('Running VUnit: ' + python + ' ' + args.join(' '));
+                let vunit = spawn(python, args, {
+                    cwd: path.dirname(runPy),
+                    shell: true,
+                });
+                vunit.on('close', (code) => {
+                    if (code === 0) {
+                        this.mOutputChannel.appendLine('\nFinished with exit code 0');
+                        resolve(code.toString());
+                    } else {
+                        let msg = `VUnit returned with non-zero exit code (${code}).`;
+                        this.mOutputChannel.appendLine('\n' + msg);
+                        reject(new Error(msg));
+                    }
+                });
+                vunitProcess(vunit);
+                vunit.stdout.on('data', (data: string) => {
+                    this.mOutputChannel.append(data.toString());
+                });
+                vunit.stderr.on('data', (data: string) => {
+                    this.mOutputChannel.append(data.toString());
+                });
             });
-            vunitProcess(vunit);
-            vunit.stdout.on('data', (data: string) => {
-                this.mOutputChannel.append(data.toString());
-            });
-            vunit.stderr.on('data', (data: string) => {
-                this.mOutputChannel.append(data.toString());
-            });
-        });
+        }
+        catch(error)
+        {
+            console.log(error);
+        }
+
+        return "";
     }
 
     public async GetRunPy(): Promise<string> {
@@ -184,17 +193,17 @@ export class VUnit {
         return vunitData;
     }
 
+    public GetWorkspaceRoot(): string | undefined {
+        const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];
+        let wsRoot: string | undefined = undefined;
+        if (workspaceFolder) {
+            wsRoot = workspaceFolder.uri.fsPath;
+        }
+        return wsRoot;
+    }
 
 }
 
 //--------------------------------------------
 //Helper-Functions
 //--------------------------------------------
-export function getWorkspaceRoot(): string | undefined {
-    const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];
-    let wsRoot: string | undefined = undefined;
-    if (workspaceFolder) {
-        wsRoot = workspaceFolder.uri.fsPath;
-    }
-    return wsRoot;
-}
