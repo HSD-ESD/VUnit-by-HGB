@@ -40,10 +40,10 @@ export class VUnit {
         this.mOutputChannel = vscode.window.createOutputChannel("VUnitByHGB.VUnit");
     }
 
-    public async GetVunitVersion(): Promise<string> {
+    public async GetVunitVersion(runPy : string): Promise<string> {
         return new Promise((resolve, reject) => {
             let version: string | undefined;
-            this.RunVunit(['--version'], (vunit: ChildProcess): void => {
+            this.RunVunit(runPy, ['--version'], (vunit: ChildProcess): void => {
                 let proc: any = vunit;
                 readline
                     .createInterface({
@@ -80,12 +80,13 @@ export class VUnit {
     }
 
     public async RunVunit(
+        runPy: string,
         vunitArgs: string[],
         vunitProcess: (vunit: ChildProcess) => void = () => {}
     ): Promise<string> {
         try{
 
-            const runPy = await this.GetRunPy();
+            //const runPy = await this.GetRunPy();
             return new Promise((resolve, reject) => {
                 if (!this.GetWorkspaceRoot()) {
                     return reject(new Error('Workspace root not defined.'));
@@ -171,7 +172,7 @@ export class VUnit {
         });
     }
 
-    public async GetVunitData(workDir: string): Promise<VunitExportData> {
+    public async GetVunitData(workDir: string, runPy:string): Promise<VunitExportData> {
         const vunitJson = path.join(workDir, `${uuid()}.json`);
         fs.mkdirSync(path.dirname(vunitJson), { recursive: true });
     
@@ -183,7 +184,7 @@ export class VUnit {
         if (vunitExportJsonOptions) {
             options.push(vunitExportJsonOptions as string);
         }
-        await this.RunVunit(options)
+        await this.RunVunit(runPy,options)
             .then(() => {
                 vunitData = JSON.parse(fs.readFileSync(vunitJson, 'utf-8'));
                 fs.unlinkSync(vunitJson);

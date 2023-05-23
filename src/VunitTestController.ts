@@ -104,9 +104,14 @@ export class VunitTestController {
 
     public async LoadTests() : Promise<void>
     {
+        
+        //Find all Run.Py-Files in WorkSpace
+        const RunPyFiles : string[] = await this.mVunit.FindRunPy((vscode.workspace.workspaceFolders || [])[0]);
+
         if (this.mTestController.items.size === 0)
         {
-            await this.mVunit.GetVunitVersion()
+            //just pick the first run.py of all found run.py-files and get vunit-version
+            await this.mVunit.GetVunitVersion(RunPyFiles[0])
                 .then((res) => {
                     this.mOutputChannel.append(`Found VUnit version ${res}`);
                 })
@@ -115,14 +120,11 @@ export class VunitTestController {
                 });
         }
 
-        //Find all Run.Py-Files in WorkSpace
-        const RunPyFiles : string[] = await this.mVunit.FindRunPy((vscode.workspace.workspaceFolders || [])[0]);
-
         // Create TestTree for each Run.Py-File
         for(const RunPy of RunPyFiles)
         {
             // get data for each run.py-file
-            const exportData: VunitExportData = await this.mVunit.GetVunitData(this.mWorkSpacePath);
+            const exportData: VunitExportData = await this.mVunit.GetVunitData(RunPy ,this.mWorkSpacePath);
 
             //relative path from workspace-folder to run-py-file 
             const RunPyPath : string = path.relative(this.mWorkSpacePath, RunPy);
@@ -205,6 +207,8 @@ export class VunitTestController {
 
     private async RunVunitTestDefault(node: vscode.TestItem, run: vscode.TestRun)
     {
+        //extract run.py path
+        const runPyPath = node.id.split('|')[0];
         //Extract testcase-name from testcase-ID
         const testCaseWildCard : string = '"' + node.id.split('|')[1] + '"';
         //Command-Line-Arguments for VUnit
@@ -224,7 +228,7 @@ export class VunitTestController {
         let vunitProcess : any;
 
         //launch vunit-process with given arguments from above
-        await this.mVunit.RunVunit(options, (vunit: ChildProcess) => {
+        await this.mVunit.RunVunit(runPyPath, options, (vunit: ChildProcess) => {
 
             vunitProcess = vunit;
 
@@ -262,6 +266,8 @@ export class VunitTestController {
         //signal for start of test-case in User-Interface
         run.started(node);
 
+        //extract run.py path
+        const runPyPath = node.id.split('|')[0];
         //Command-Line-Arguments for VUnit
         const testCaseWildCard : string = '"' + node.id.split('|')[1] + '"';
         let options = [testCaseWildCard, '--no-color', '--exit-0', '-g'];
@@ -273,7 +279,7 @@ export class VunitTestController {
             options.push(vunitOptions as string);
         }
         
-        await this.mVunit.RunVunit(options);
+        await this.mVunit.RunVunit(runPyPath, options);
     }
 
 }
