@@ -173,6 +173,7 @@ export class VUnit {
     }
 
     public async GetVunitData(workDir: string, runPy:string): Promise<VunitExportData> {
+        //const runPyDirectory : string = path.dirname(runPy);
         const vunitJson = path.join(workDir, `${uuid()}.json`);
         fs.mkdirSync(path.dirname(vunitJson), { recursive: true });
     
