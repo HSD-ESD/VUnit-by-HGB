@@ -18,6 +18,7 @@ export class VunitTestController {
     //vs-code-members
     private mContext : vscode.ExtensionContext;
     private mOutputChannel : vscode.OutputChannel;
+    private mFolderWatcher : vscode.FileSystemWatcher;
 
     //specific members
     private mTestController : vscode.TestController;
@@ -42,6 +43,34 @@ export class VunitTestController {
         //get workspace-path of extension
         const workSpacePath = this.mVunit.GetWorkspaceRoot(); 
         if(workSpacePath) { this.mWorkSpacePath = workSpacePath; }
+        // watch folder of extension
+        const testPath = path.join(this.mWorkSpacePath, "*");
+        this.mFolderWatcher = vscode.workspace.createFileSystemWatcher(path.join(this.mWorkSpacePath, "*"));
+        
+        //handle events for FolderWatcher
+        this.mFolderWatcher.onDidCreate( (uri) => {
+            if(uri.fsPath.endsWith("run.py"))
+            {
+                this.LoadTests();
+            }
+        });
+        this.mFolderWatcher.onDidDelete( (uri) => {
+            if(uri.fsPath.endsWith("run.py"))
+            {
+                this.LoadTests();
+            }
+        });
+        this.mFolderWatcher.onDidChange( (uri) => {
+            if(uri.fsPath.endsWith("run.py"))
+            {
+                this.LoadTests();
+            }
+        });
+
+        // Start watching the folder
+        const disposable = vscode.Disposable.from(this.mFolderWatcher);
+        // Dispose the watcher when extension is not active
+        context.subscriptions.push(disposable);
 
         // create TestController for VUnit
         this.mTestController = vscode.tests.createTestController('vunit-test-controller', 'VUnit TestController');
@@ -53,9 +82,8 @@ export class VunitTestController {
         //create profile for debugging tests
         this.mDebugProfile = this.mTestController.createRunProfile('Debug', vscode.TestRunProfileKind.Debug, request => this.RunTests(request), true);
 
-        this.mTestController.resolveHandler = test => {
-            //this.mTestController.items.replace( );
-            //this.LoadTests();
+        this.mTestController.resolveHandler = load => {
+            this.LoadTests();
         };
     }
 
@@ -74,7 +102,7 @@ export class VunitTestController {
         //run.end();
     }
 
-    public async LoadTests()
+    public async LoadTests() : Promise<void>
     {
         if (this.mTestController.items.size === 0)
         {

@@ -124,6 +124,7 @@ export class VUnit {
                 vunit.stderr.on('data', (data: string) => {
                     this.mOutputChannel.append(data.toString());
                 });
+
             });
         }
         catch(error)
