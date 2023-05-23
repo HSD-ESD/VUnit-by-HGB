@@ -88,7 +88,7 @@ export class VunitTestController {
         };
     }
 
-    public async RunTests(request : vscode.TestRunRequest)
+    public async RunTests(request : vscode.TestRunRequest) : Promise<void>
     {
         const run : vscode.TestRun = this.mTestController.createTestRun(request);
 
@@ -155,6 +155,12 @@ export class VunitTestController {
                 .catch((err) => {
                     this.mOutputChannel.append(err);
                 });
+        }
+
+        //delete all old items
+        for(const [id,item] of this.mTestController.items)
+        {
+            this.mTestController.items.delete(id);
         }
 
         // Create TestTree for each Run.Py-File
@@ -253,7 +259,7 @@ export class VunitTestController {
         return undefined;
       }
 
-    private async RunVunitTestsDefault(node : vscode.TestItem, run: vscode.TestRun)
+    private async RunVunitTestsDefault(node : vscode.TestItem, run: vscode.TestRun) : Promise<void>
     {
         //extract run.py path
         const runPyPath = node.id.split('|')[0];
@@ -340,7 +346,7 @@ export class VunitTestController {
 
     }
 
-    private async RunVunitTestsGUI(node: vscode.TestItem, run: vscode.TestRun)
+    private async RunVunitTestsGUI(node: vscode.TestItem, run: vscode.TestRun) : Promise<void>
     {
         //extract run.py path
         const runPyPath = node.id.split('|')[0];
