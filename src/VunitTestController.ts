@@ -9,6 +9,11 @@ import exp = require("constants");
 import readline = require('readline');
 import { ChildProcess } from "child_process";
 
+//--------------------------------------------
+// module-internal constants
+//--------------------------------------------
+
+
 export class VunitTestController {
 
     //--------------------------------------------
@@ -45,7 +50,7 @@ export class VunitTestController {
         if(workSpacePath) { this.mWorkSpacePath = workSpacePath; }
         // watch folder of extension
         const testPath = path.join(this.mWorkSpacePath, "*");
-        this.mFolderWatcher = vscode.workspace.createFileSystemWatcher(path.join(this.mWorkSpacePath, "*"));
+        this.mFolderWatcher = vscode.workspace.createFileSystemWatcher(path.join(this.mWorkSpacePath, "**/*"));
         
         //handle events for FolderWatcher
         this.mFolderWatcher.onDidCreate( (uri) => {
@@ -82,7 +87,7 @@ export class VunitTestController {
         //create profile for debugging tests
         this.mDebugProfile = this.mTestController.createRunProfile('Debug', vscode.TestRunProfileKind.Debug, request => this.RunTests(request), true);
 
-        //resolve-handler for manual refreshing of testcases in User-Interface
+        //refresh-handler for manual refreshing of testcases in User-Interface
         this.mTestController.refreshHandler = load => {
             this.LoadTests();
         };
