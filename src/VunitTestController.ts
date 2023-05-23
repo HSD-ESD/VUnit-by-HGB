@@ -342,13 +342,26 @@ export class VunitTestController {
 
     private async RunVunitTestsGUI(node: vscode.TestItem, run: vscode.TestRun)
     {
-        //signal for start of test-case in User-Interface
-        run.started(node);
-
         //extract run.py path
         const runPyPath = node.id.split('|')[0];
+
+        //wildcard-appendix
+        let wildcardAppendix : string = "";
+        //check, if this node is a test-suite
+        if(node.children.size > 0)
+        {
+            wildcardAppendix = ".*";
+        }
+        //Extract testcase-name from testcase-ID
+        let testCaseWildCard : string = "";
+
+        //check, if node is a top-level node
+        if(node.parent)
+        {
+            testCaseWildCard = '"' + node.id.split('|')[1] + wildcardAppendix + '"';
+        }
+
         //Command-Line-Arguments for VUnit
-        const testCaseWildCard : string = '"' + node.id.split('|')[1] + '"';
         let options = [testCaseWildCard, '--no-color', '--exit-0', '-g'];
 
         const vunitOptions = vscode.workspace
