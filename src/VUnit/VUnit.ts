@@ -214,7 +214,7 @@ export class VUnit {
         return wsRoot;
     }
 
-    public MatchProblems(line : string)
+    public MatchProblems(line : string, diagnosticCollection : vscode.DiagnosticCollection) : void
     {   
         const match = cVunitProblemMatcher.exec(line);
         if (match) {
@@ -224,11 +224,26 @@ export class VUnit {
             const severity = match[cVunitProblemMatcher_SeverityIndex];
             const message = match[cVunitProblemMatcher_MessageIndex];
 
-            const diagnosticSeverity = severity === 'error' ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning;
+            const diagnosticSeverity = severity === 'Error' ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning;
             const range = new vscode.Range(new vscode.Position(lineNum - 1, columnNum - 1), new vscode.Position(lineNum - 1, columnNum));
             const diagnostic = new vscode.Diagnostic(range, message, diagnosticSeverity);
-            const diagnosticCollection = vscode.languages.createDiagnosticCollection('vunitErrors');
-            diagnosticCollection.set(vscode.Uri.file(file), [diagnostic]);
+            
+            // check for existing diagnostics for this file
+            if (diagnosticCollection.has(vscode.Uri.file(file))) 
+            {
+                const currentDiagnostics = diagnosticCollection.get(vscode.Uri.file(file));
+
+                if (currentDiagnostics) {
+                    // add new diagnostic to existing diagnostic-list
+                    const updatedDiagnostics = currentDiagnostics.concat(diagnostic);
+                    diagnosticCollection.set(vscode.Uri.file(file), updatedDiagnostics);
+                }
+            } 
+            else 
+            {
+                // if no existing diagnostics, add a new diagnostic
+                diagnosticCollection.set(vscode.Uri.file(file), [diagnostic]);
+            }
         }
     }
 }

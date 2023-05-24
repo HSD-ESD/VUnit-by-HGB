@@ -13,6 +13,9 @@ import { ChildProcess } from "child_process";
 // module-internal constants
 //--------------------------------------------
 
+//TestBench-Status-Matcher
+const cVunitTestEnd : RegExp = /(pass|fail) \(.*\) (.*) \(.*\)/;
+const cVunitTestStart : RegExp = /Starting (.*)/;
 
 export class VunitTestController {
 
@@ -24,6 +27,7 @@ export class VunitTestController {
     private mContext : vscode.ExtensionContext;
     private mOutputChannel : vscode.OutputChannel;
     private mFolderWatcher : vscode.FileSystemWatcher;
+    private mDiagnosticCollection : vscode.DiagnosticCollection;
 
     //specific members
     private mTestController : vscode.TestController;
@@ -41,6 +45,7 @@ export class VunitTestController {
         //initialize vs-code-members
         this.mContext = context;
         this.mOutputChannel = vscode.window.createOutputChannel("VUnitByHGB.VUnitTestController");
+        this.mDiagnosticCollection = vscode.languages.createDiagnosticCollection('VUnitByHGB.vunitErrors');
 
         //initialize specific members
         this.mVunit = new VUnit();
@@ -86,6 +91,11 @@ export class VunitTestController {
 
         //create profile for debugging tests
         this.mDebugProfile = this.mTestController.createRunProfile('Debug', vscode.TestRunProfileKind.Debug, request => this.RunTests(request), true);
+
+        //resolve-handler for initial loading of testcases in User-Interface
+        this.mTestController.resolveHandler = load => {
+            this.LoadTests();
+        };
 
         //refresh-handler for manual refreshing of testcases in User-Interface
         this.mTestController.refreshHandler = load => {
@@ -247,7 +257,8 @@ export class VunitTestController {
         }
     }
 
-    private findNode(itemId: string, node: vscode.TestItem): vscode.TestItem | undefined {
+    private findNode(itemId: string, node: vscode.TestItem): vscode.TestItem | undefined 
+    {
         if (node.id === itemId) {
           return node;
         }
@@ -262,10 +273,13 @@ export class VunitTestController {
         }
       
         return undefined;
-      }
+    }
 
     private async RunVunitTestsDefault(node : vscode.TestItem, run: vscode.TestRun) : Promise<void>
     {
+        //clear all contributions to Problems-Window
+        this.mDiagnosticCollection.clear();
+
         //extract run.py path
         const runPyPath = node.id.split('|')[0];
         //wildcard-appendix
@@ -300,52 +314,22 @@ export class VunitTestController {
         await this.mVunit.RunVunit(runPyPath, options, (vunit: ChildProcess) => {
 
             vunitProcess = vunit;
-
-            //this.mVunitProcess = vunit;
-            const testStart = /Starting (.*)/;
-            const testEnd = /(pass|fail) \(.*\) (.*) \(.*\)/;
+            
             readline
                 .createInterface({
                     input: vunitProcess.stdout,
                     terminal: false,
                 })
                 .on('line', (line: string) => {
-                    let start = testStart.exec(line);
-                    if (start) 
-                    {
-                        //...
-                    }
-
-                    //check for pass or fail
-                    let result = testEnd.exec(line);
-                    if (result) {
-
-                        const message : vscode.TestMessage = new vscode.TestMessage("failed");
-
-                        //evaluate result
-                        if(result[1] === 'pass')
-                        {
-                            //get related test-item
-                            const item = this.findNode(runPyPath + "|" + result[2], node);
-                            if(item) 
-                            { 
-                                run.passed(item); 
-                            }
-                        }
-                        else
-                        {
-                            //get related test-item
-                            const item = this.findNode(runPyPath + "|" + result[2], node);
-                            if(item) 
-                            { 
-                                run.failed(item, new vscode.TestMessage(result[2] + " failed!")); 
-                            }
-                            
-                        }
-                    }
+                    
+                    //check for success/failure of VUnit-TestCase
+                    this.MatchTestCaseStatus(line, node, run, runPyPath);
 
                     //match VUnit-Errors
-                    this.mVunit.MatchProblems(line);
+                    if(vscode.workspace.getConfiguration().get('vunit.matchProblems'))
+                    {
+                        this.mVunit.MatchProblems(line, this.mDiagnosticCollection); 
+                    }
 
                 });
         }).finally(() => {
@@ -389,6 +373,37 @@ export class VunitTestController {
         }
         
         await this.mVunit.RunVunit(runPyPath, options);
+    }
+
+    private MatchTestCaseStatus(line : string, node : vscode.TestItem, run : vscode.TestRun, runPyPath : string) : void
+    {
+
+        //check for pass or fail
+        const result = cVunitTestEnd.exec(line);
+        if (result) {
+
+            //evaluate result
+            if(result[1] === 'pass')
+            {
+                //get related test-item
+                const item = this.findNode(runPyPath + "|" + result[2], node);
+                if(item) 
+                { 
+                    run.passed(item); 
+                }
+            }
+            else
+            {
+                //get related test-item
+                const item = this.findNode(runPyPath + "|" + result[2], node);
+                if(item) 
+                { 
+                    run.failed(item, new vscode.TestMessage(result[2] + " failed!")); 
+                }
+                
+            }
+        }
+
     }
 
 }

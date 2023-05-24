@@ -47,6 +47,4 @@ export async function activate(context: vscode.ExtensionContext) {
     //create instance of test-controller for VUnit
     let testController : VunitTestController = new VunitTestController(context);
     
-    //load tests initially
-    testController.LoadTests();
 }

@@ -90,6 +90,11 @@
                     "description": "write diagnostic logs to the given file",
                     "type": "string",
                     "scope": "resource"
+                },
+                "vunit.matchProblems": {
+                    "description": "Display Errors and Warnings from VUnit as Problems",
+                    "type": "boolean",
+                    "default": true
                 }
             }
         }
