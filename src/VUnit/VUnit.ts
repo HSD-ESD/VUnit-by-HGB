@@ -16,7 +16,7 @@ import uuid = require('uuid-random');
 //--------------------------------------------
 //module-internal Constants
 //--------------------------------------------
-const emptyVunitExportData : VunitExportData = {
+const cEmptyVunitExportData : VunitExportData = {
     export_format_version: {
         major: 1,
         minor: 0,
@@ -25,6 +25,15 @@ const emptyVunitExportData : VunitExportData = {
     files: [],
     tests: [],
 };
+
+//Problem-Matcher
+const cVunitProblemMatcher : RegExp = /\*+\s+(Error|Warning)[:|\s+\(\.*\)].*\s(.:.*\w*)\((\d+)\).(.*)/;
+const cVunitProblemMatcher_ColumnIndex : number = 0;
+const cVunitProblemMatcher_SeverityIndex : number = 1;
+const cVunitProblemMatcher_FileIndex : number = 2;
+const cVunitProblemMatcher_LineIndex : number = 3;
+const cVunitProblemMatcher_MessageIndex : number = 4;
+
 
 export class VUnit {
 
@@ -177,7 +186,7 @@ export class VUnit {
         const vunitJson = path.join(workDir, `${uuid()}.json`);
         fs.mkdirSync(path.dirname(vunitJson), { recursive: true });
     
-        let vunitData: VunitExportData = emptyVunitExportData;
+        let vunitData: VunitExportData = cEmptyVunitExportData;
         let options = ['--list', `--export-json ${vunitJson}`];
         const vunitExportJsonOptions = vscode.workspace
             .getConfiguration()
@@ -191,7 +200,7 @@ export class VUnit {
                 fs.unlinkSync(vunitJson);
             })
             .catch((err) => {
-                vunitData = emptyVunitExportData;
+                vunitData = cEmptyVunitExportData;
             });
         return vunitData;
     }
@@ -205,6 +214,23 @@ export class VUnit {
         return wsRoot;
     }
 
+    public MatchProblems(line : string)
+    {   
+        const match = cVunitProblemMatcher.exec(line);
+        if (match) {
+            const file = match[cVunitProblemMatcher_FileIndex];
+            const lineNum = parseInt(match[cVunitProblemMatcher_LineIndex]);
+            const columnNum = parseInt(match[cVunitProblemMatcher_ColumnIndex]);
+            const severity = match[cVunitProblemMatcher_SeverityIndex];
+            const message = match[cVunitProblemMatcher_MessageIndex];
+
+            const diagnosticSeverity = severity === 'error' ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning;
+            const range = new vscode.Range(new vscode.Position(lineNum - 1, columnNum - 1), new vscode.Position(lineNum - 1, columnNum));
+            const diagnostic = new vscode.Diagnostic(range, message, diagnosticSeverity);
+            const diagnosticCollection = vscode.languages.createDiagnosticCollection('vunitErrors');
+            diagnosticCollection.set(vscode.Uri.file(file), [diagnostic]);
+        }
+    }
 }
 
 //--------------------------------------------

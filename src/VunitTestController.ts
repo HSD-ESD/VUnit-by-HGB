@@ -315,6 +315,8 @@ export class VunitTestController {
                     {
                         //...
                     }
+
+                    //check for pass or fail
                     let result = testEnd.exec(line);
                     if (result) {
 
@@ -341,6 +343,10 @@ export class VunitTestController {
                             
                         }
                     }
+
+                    //match VUnit-Errors
+                    this.mVunit.MatchProblems(line);
+
                 });
         }).finally(() => {
             vunitProcess = 0;
