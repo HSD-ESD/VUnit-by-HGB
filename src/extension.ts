@@ -14,35 +14,6 @@ import * as fs from 'fs';
 import { VunitTestController } from './VunitTestController';
 
 export async function activate(context: vscode.ExtensionContext) {
-
-    /*
-    const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];
-    const workDir = path.join(context.globalStoragePath, 'workdir');
-    fs.mkdirSync(workDir, { recursive: true });
-    const log = new Log('vunit', workspaceFolder, 'VUnit Explorer Log');
-    context.subscriptions.push(log);
-
-    // get the Test Explorer extension
-    const testExplorerExtension = vscode.extensions.getExtension<TestHub>(
-        testExplorerExtensionId
-    );
-    if (log.enabled) {
-        log.info(`Test Explorer ${testExplorerExtension ? '' : 'not '}found`);
-    }
-
-    if (testExplorerExtension) {
-        const testHub = testExplorerExtension.exports;
-
-        context.subscriptions.push(
-            new TestAdapterRegistrar(
-                testHub,
-                (workspaceFolder) =>
-                    new VUnitAdapter(workspaceFolder, workDir, log),
-                log
-            )
-        );
-    }
-    */
     
     //create instance of test-controller for VUnit
     let testController : VunitTestController = new VunitTestController(context);
