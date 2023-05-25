@@ -1,6 +1,6 @@
 //specific imports
-import { VUnit } from "./VUnit/VUnit";
-import { VunitExportData } from "./VUnit/VUnitPackage";
+import { VUnit } from "./VUnit";
+import { VunitExportData } from "./VUnitPackage";
 
 //general imports
 import * as vscode from 'vscode';
