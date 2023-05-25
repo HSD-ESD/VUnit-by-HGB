@@ -49,4 +49,5 @@ ID                                   | Command
 
 # Dependencies
 
-This extension uses the [Test Explorer for Visual Studio Code](https://github.com/hbenl/vscode-test-explorer) extension published under the MIT license.
+This extension uses the [Testing API from Visual Studio Code].
+This extension is published under the GNU GPL license.

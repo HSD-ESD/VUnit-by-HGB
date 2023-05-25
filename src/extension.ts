@@ -1,17 +1,24 @@
-/* ------------------------------------------------------------------------------------------
- * MIT License
- * Copyright (c) 2020 Henrik Bohlin
- * Full license text can be found in /LICENSE or at https://opensource.org/licenses/MIT.
- * ------------------------------------------------------------------------------------------ */
+/*******************************************************************************
+ *                                                                              *
+ *  VUnit by HGB - VUnit-TestController for Visual-Studio-Code                  *
+ *                                                                              *
+ *  Copyright (C) [2023] [jakobjung10]                                          *
+ *                                                                              *
+ *  This program is free software: you can redistribute it and/or modify        *
+ *  it under the terms of the GNU General Public License as published by        *
+ *  the Free Software Foundation, either version 3 of the License, or           *
+ *  (at your option) any later version.                                         *
+ *                                                                              *
+ *  You should have received a copy of the GNU General Public License           *
+ *  along with this program. If not, see <https://www.gnu.org/licenses/>.       *
+ *                                                                              *
+ *******************************************************************************/
 
 import * as vscode from 'vscode';
-import { TestHub, testExplorerExtensionId } from 'vscode-test-adapter-api';
-import { Log, TestAdapterRegistrar } from 'vscode-test-adapter-util';
-import { VUnitAdapter } from './adapter';
 import * as path from 'path';
 import * as fs from 'fs';
 
-import { VunitTestController } from './VunitTestController';
+import { VunitTestController } from './VUnit/VunitTestController';
 
 export async function activate(context: vscode.ExtensionContext) {
     
