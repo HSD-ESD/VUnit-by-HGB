@@ -95,7 +95,6 @@ export class VUnit {
     ): Promise<string> {
         try{
 
-            //const runPy = await this.GetRunPy();
             return new Promise((resolve, reject) => {
                 if (!this.GetWorkspaceRoot()) {
                     return reject(new Error('Workspace root not defined.'));
@@ -108,7 +107,7 @@ export class VUnit {
                 }
                 const python = vscode.workspace
                     .getConfiguration()
-                    .get('vunit.python') as string;
+                    .get('vunit-by-hgb.python') as string;
                 const args = ['"' + runPy + '"'].concat(vunitArgs);
                 this.mOutputChannel.appendLine('');
                 this.mOutputChannel.appendLine('===========================================');
@@ -156,10 +155,10 @@ export class VUnit {
     
             const runPyConf = vscode.workspace
                 .getConfiguration()
-                .get('vunit.runpy');
+                .get('vunit-by-hgb.runpy');
             if (runPyConf) {
                 resolve(path.join(workspaceFolder.uri.fsPath, runPyConf as string));
-            } else if (vscode.workspace.getConfiguration().get('vunit.findRunPy')) {
+            } else if (vscode.workspace.getConfiguration().get('vunit-by-hgb.findRunPy')) {
                 this.FindRunPy(workspaceFolder).then((res) => {
                     if (res.length === 0) {
                         reject(new Error('run.py not found or configured.'));
@@ -190,7 +189,7 @@ export class VUnit {
         let options = ['--list', `--export-json ${vunitJson}`];
         const vunitExportJsonOptions = vscode.workspace
             .getConfiguration()
-            .get('vunit.exportJsonOptions');
+            .get('vunit-by-hgb.exportJsonOptions');
         if (vunitExportJsonOptions) {
             options.push(vunitExportJsonOptions as string);
         }

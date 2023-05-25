@@ -25,11 +25,14 @@
         "vhdl",
         "verilog",
         "system verilog",
-        "test adapter",
+        "test controller",
         "test explorer"
     ],
     "activationEvents": [
-        "onLanguage:vhdl"
+        "workspaceContains:*.vhd",
+        "onLanguage:vhdl",
+        "onLanguage:verilog",
+        "workspaceContains:*.v"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -37,66 +40,44 @@
             "type": "object",
             "title": "VUnit Test Explorer",
             "properties": {
-                "vunit.runpy": {
+                "vunit-by-hgb.runpy": {
                     "title": "run.py",
                     "description": "Path to VUnit python script (run.py) relative to workspaceFolder.",
                     "type": "string",
                     "scope": "window"
                 },
-                "vunit.findRunPy": {
-                    "title": "Find run.py",
-                    "description": "Search workspace for a run.py file unless `vunit.runpy` is set. Fails if multiple files are found.",
-                    "type": "boolean",
-                    "default": true
-                },
-                "vunit.python": {
+                "vunit-by-hgb.python": {
                     "title": "Python executable",
                     "description": "Path to python executable",
                     "type": "string",
                     "default": "python"
                 },
-                "vunit.flattenSingleLibrary": {
-                    "description": "Flatten library hierarchy in explorer when all tests are contained within a single library.",
-                    "type": "boolean",
-                    "default": false
-                },
-                "vunit.options": {
+                "vunit-by-hgb.shellOptions": {
                     "description": "VUnit run.py command line options when running tests.",
                     "type": "string",
                     "default": ""
                 },
-                "vunit.guiOptions": {
+                "vunit-by-hgb.guiOptions": {
                     "description": "VUnit run.py command line options when running GUI, -g should not be added here.",
                     "type": "string",
                     "default": ""
                 },
-                "vunit.exportJsonOptions": {
+                "vunit-by-hgb.exportJsonOptions": {
                     "description": "VUnit run.py command line options when discovering test with --export-json.",
                     "type": "string",
                     "default": ""
                 },
-                "vunit.watch": {
-                    "description": "Watch run.py and testbench files for changes and reload tests on save.",
-                    "type": "boolean",
-                    "default": true
-                },
-                "vunit.logpanel": {
-                    "description": "write diagnotic logs to an output panel",
-                    "type": "boolean",
-                    "scope": "resource",
-                    "default": true
-                },
-                "vunit.logfile": {
-                    "description": "write diagnostic logs to the given file",
-                    "type": "string",
-                    "scope": "resource"
-                },
-                "vunit.matchProblems": {
+                "vunit-by-hgb.matchProblems": {
                     "description": "Display Errors and Warnings from VUnit as Problems",
                     "type": "boolean",
                     "default": true
                 }
             }
+        },
+        "menus": {
+            "testing/item/context":[
+                
+            ]
         }
     },
     "scripts": {

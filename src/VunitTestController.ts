@@ -45,7 +45,7 @@ export class VunitTestController {
         //initialize vs-code-members
         this.mContext = context;
         this.mOutputChannel = vscode.window.createOutputChannel("VUnitByHGB.VUnitTestController");
-        this.mDiagnosticCollection = vscode.languages.createDiagnosticCollection('VUnitByHGB.vunitErrors');
+        this.mDiagnosticCollection = vscode.languages.createDiagnosticCollection('VUnitByHGB.VUnitErrors');
 
         //initialize specific members
         this.mVunit = new VUnit();
@@ -88,7 +88,7 @@ export class VunitTestController {
 
         //create profile for running Tests
         this.mRunProfile = this.mTestController.createRunProfile('Run', vscode.TestRunProfileKind.Run, request => this.RunTests(request), true);
-
+        
         //create profile for debugging tests
         this.mDebugProfile = this.mTestController.createRunProfile('Debug', vscode.TestRunProfileKind.Debug, request => this.RunTests(request), true);
 
@@ -302,7 +302,7 @@ export class VunitTestController {
 
         const vunitOptions = vscode.workspace
             .getConfiguration()
-            .get('vunit.options');
+            .get('vunit-by-hgb.shellOptions');
         if (vunitOptions) {
             options.push(vunitOptions as string);
         }   
@@ -326,7 +326,7 @@ export class VunitTestController {
                     this.MatchTestCaseStatus(line, node, run, runPyPath);
 
                     //match VUnit-Errors
-                    if(vscode.workspace.getConfiguration().get('vunit.matchProblems'))
+                    if(vscode.workspace.getConfiguration().get('vunit-by-hgb.matchProblems'))
                     {
                         this.mVunit.MatchProblems(line, this.mDiagnosticCollection); 
                     }
@@ -367,7 +367,7 @@ export class VunitTestController {
 
         const vunitOptions = vscode.workspace
             .getConfiguration()
-            .get('vunit.guiOptions');
+            .get('vunit-by-hgb.guiOptions');
         if (vunitOptions) {
             options.push(vunitOptions as string);
         }
