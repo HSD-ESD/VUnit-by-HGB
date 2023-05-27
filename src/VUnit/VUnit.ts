@@ -226,6 +226,7 @@ export class VUnit {
             const diagnosticSeverity = severity === 'Error' ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning;
             const range = new vscode.Range(new vscode.Position(lineNum - 1, columnNum - 1), new vscode.Position(lineNum - 1, columnNum));
             const diagnostic = new vscode.Diagnostic(range, message, diagnosticSeverity);
+            diagnostic.source = "VUnit";
             
             // check for existing diagnostics for this file
             if (diagnosticCollection.has(vscode.Uri.file(file))) 

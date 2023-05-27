@@ -18,11 +18,11 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
-import { VunitTestController } from './VUnit/VunitTestController';
+import { VUnitTestController } from './VUnit/VUnitTestController';
 
 export async function activate(context: vscode.ExtensionContext) {
     
     //create instance of test-controller for VUnit
-    let testController : VunitTestController = new VunitTestController(context);
+    let testController : VUnitTestController = new VUnitTestController(context);
     
 }
