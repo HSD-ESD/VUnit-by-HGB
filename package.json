@@ -71,6 +71,11 @@
                     "description": "Display Errors and Warnings from VUnit as Problems",
                     "type": "boolean",
                     "default": true
+                },
+                "vunit-by-hgb.matchAssertionFailure": {
+                    "description": "Display Assertion-Failures from VUnit as Problems",
+                    "type": "boolean",
+                    "default": true
                 }
             }
         },

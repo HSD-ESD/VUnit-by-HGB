@@ -16,8 +16,9 @@ import { ChildProcess } from "child_process";
 //TestBench-Status-Matcher
 const cVunitTestEnd : RegExp = /(pass|fail) \(.*\) (.*) \(.*\)/;
 const cVunitTestStart : RegExp = /Starting (.*)/;
+const cVunitStopped : RegExp = /Stopped at ([^\s]+) line (\d+)/;
 
-export class VunitTestController {
+export class VUnitTestController {
 
     //--------------------------------------------
 	//Private Members
@@ -157,6 +158,7 @@ export class VunitTestController {
     public async LoadTests() : Promise<void>
     {
         
+
         //Find all Run.Py-Files in WorkSpace
         const RunPyFiles : string[] = await this.mVunit.FindRunPy((vscode.workspace.workspaceFolders || [])[0]);
 
@@ -310,6 +312,9 @@ export class VunitTestController {
         //variable for referencing output from vunit-process to analyse its output
         let vunitProcess : any;
 
+        //necessary for determining, which file caused an assertion failure
+        let IsAssertionFailure : Boolean = false;
+
         //launch vunit-process with given arguments from above
         await this.mVunit.RunVunit(runPyPath, options, (vunit: ChildProcess) => {
 
@@ -329,6 +334,20 @@ export class VunitTestController {
                     if(vscode.workspace.getConfiguration().get('vunit-by-hgb.matchProblems'))
                     {
                         this.mVunit.MatchProblems(line, this.mDiagnosticCollection); 
+                    }
+
+                    //match VUnit-Assertion-Failure
+                    if(vscode.workspace.getConfiguration().get('vunit-by-hgb.matchAssertionFailure'))
+                    {
+                        // Check for assertion failure
+                        if (line.includes('** Error: Assertion violation.') && !IsAssertionFailure) {
+                            IsAssertionFailure = true;
+                        }
+
+                        if(IsAssertionFailure)
+                        {
+                            this.MatchAssertionFailure(line, IsAssertionFailure);
+                        }
                     }
 
                 });
@@ -406,6 +425,41 @@ export class VunitTestController {
 
     }
 
+    private MatchAssertionFailure(line : string, IsAssertionFailure : Boolean) : void
+    {
+        const match = cVunitStopped.exec(line);
+        if (match) {
+            const assertionFile = match[1];
+            const assertionLineNumber = parseInt(match[2]);
+            
+            const diagnostic: vscode.Diagnostic = {
+                severity: vscode.DiagnosticSeverity.Error,
+                range: new vscode.Range(assertionLineNumber - 1, 0, assertionLineNumber - 1, 0),
+                message: 'Assertion violation detected.',
+                source: 'VUnit',
+            };
+
+            // check for existing diagnostics for this file
+            if (this.mDiagnosticCollection.has(vscode.Uri.file(assertionFile))) 
+            {
+                const currentDiagnostics = this.mDiagnosticCollection.get(vscode.Uri.file(assertionFile));
+
+                if (currentDiagnostics) {
+                    // add new diagnostic to existing diagnostic-list
+                    const updatedDiagnostics = currentDiagnostics.concat(diagnostic);
+                    this.mDiagnosticCollection.set(vscode.Uri.file(assertionFile), updatedDiagnostics);
+                }
+            } 
+            else 
+            {
+                // if no existing diagnostics, add a new diagnostic
+                this.mDiagnosticCollection.set(vscode.Uri.file(assertionFile), [diagnostic]);
+            }
+
+            //reset boolean for efficiently detecting other assertion failures
+            IsAssertionFailure = false;
+        }
+    }
 }
 
 //--------------------------------------------
