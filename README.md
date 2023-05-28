@@ -23,14 +23,7 @@ The following commands are available in VS Code's command palette, use the ID to
 
 ID                                   | Command
 -------------------------------------|--------------------------------------------
-`test-explorer.reload`               | Reload tests
-`test-explorer.run-all`              | Run all tests
-`test-explorer.run-file`             | Run tests in current file
-`test-explorer.run-test-at-cursor`   | Run the test at the current cursor position
-`test-explorer.rerun`                | Repeat the last test run
-`test-explorer.debug-test-at-cursor` | Debug the test at the current cursor position
-`test-explorer.redebug`              | Repeat the last test run in the debugger
-`test-explorer.cancel`               | Cancel running tests
+
 
 # Dependencies
 
