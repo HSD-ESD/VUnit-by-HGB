@@ -5,6 +5,7 @@ import { VunitExportData } from "./VUnitPackage";
 //general imports
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import exp = require("constants");
 import readline = require('readline');
 import { ChildProcess } from "child_process";
@@ -225,10 +226,12 @@ export class VUnitTestController {
                 }
 
                 //create node for testcase
-                const testCaseID = RunPy.concat("|", testcase.name);
-                const testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testCaseID, testCaseName);
-                testBenchItem.children.add(testCaseItem);
+                const testCaseID : string = RunPy.concat("|", testcase.name);
+                const testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testCaseID, testCaseName, vscode.Uri.file(testcase.location.file_name));
+                testCaseItem.range = GetTestbenchRange(testcase.location.file_name, testcase.location.offset, testcase.location.length);
 
+                testBenchItem.children.add(testCaseItem);
+                
             }
 
         }
@@ -462,6 +465,7 @@ export class VUnitTestController {
     }
 }
 
+
 //--------------------------------------------
 //Helper Methods
 //--------------------------------------------
@@ -472,3 +476,18 @@ const mapTestItems = <T>(items: vscode.TestItemCollection, mapper: (t: vscode.Te
 	items.forEach(t => result.push(mapper(t)));
 	return result;
 };
+
+function GetTestbenchRange(filePath : string, offset : number, testcaseNameLength : number) : vscode.Range
+{
+    const testBenchSrc : string = fs.readFileSync(filePath, 'utf8');
+    const linesUntilTestcase : string[] = testBenchSrc.substring(0, offset).split(/\r?\n/);
+    const testCaseStartLine = linesUntilTestcase.length - 1;
+    //const testcaseEndLine : number = testBenchSrc.substring(offset, testBenchSrc.length).split(/\r?\n/).findIndex(line => IsTestbenchEnd(line));
+    return new vscode.Range(new vscode.Position(testCaseStartLine, 0), new vscode.Position(testCaseStartLine, 0));
+}
+
+function IsTestbenchEnd(line : string) : boolean
+{
+    //empty
+    return true;
+}
