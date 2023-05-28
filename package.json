@@ -16,12 +16,19 @@
         "vscode": "^1.59.0"
     },
     "categories": [
+        "Testing",
+        "Debuggers",
+        "Linters",
+        "Programming Languages",
         "Other"
     ],
     "keywords": [
         "VUnit",
         "test",
         "testing",
+        "unit testing",
+        "verification",
+        "hdl",
         "VHDL",
         "vhdl",
         "verilog",
