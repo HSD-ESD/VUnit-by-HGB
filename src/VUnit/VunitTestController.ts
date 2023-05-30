@@ -193,7 +193,7 @@ export class VUnitTestController {
             const RunPyPath : string = path.relative(this.mWorkSpacePath, RunPy);
 
             //create test-item for selected run.py
-            let runPyItem : vscode.TestItem = this.mTestController.createTestItem(RunPy,RunPyPath);
+            let runPyItem : vscode.TestItem = this.mTestController.createTestItem(RunPy,RunPyPath, vscode.Uri.file(RunPy));
             this.mTestController.items.add(runPyItem);
 
             // add all testcases to specified run.py-testcase-item
@@ -223,7 +223,7 @@ export class VUnitTestController {
                 //create node for testbench if not existing yet
                 if (!testBenchItem)
                 {
-                    testBenchItem = this.mTestController.createTestItem(testBenchID, testBenchName);
+                    testBenchItem = this.mTestController.createTestItem(testBenchID, testBenchName, vscode.Uri.file(testcase.location.file_name));
                     libraryItem.children.add(testBenchItem);
                 }
 
