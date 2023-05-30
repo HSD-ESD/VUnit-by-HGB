@@ -129,6 +129,8 @@ export class VUnitTestController {
         } 
         // all testcases should be run
         else {
+
+            this.mDiagnosticCollection.clear();
             
             //get all top-level items (all run.py-scripts)
             const TopLevelItems : vscode.TestItem[] = mapTestItems(this.mTestController.items, item => item); 
@@ -282,9 +284,6 @@ export class VUnitTestController {
 
     private async RunVunitTestsDefault(node : vscode.TestItem, run: vscode.TestRun) : Promise<void>
     {
-        //clear all contributions to Problems-Window
-        this.mDiagnosticCollection.clear();
-
         //extract run.py path
         const runPyPath = node.id.split('|')[0];
         //wildcard-appendix
@@ -448,9 +447,18 @@ export class VUnitTestController {
                 const currentDiagnostics = this.mDiagnosticCollection.get(vscode.Uri.file(assertionFile));
 
                 if (currentDiagnostics) {
-                    // add new diagnostic to existing diagnostic-list
-                    const updatedDiagnostics = currentDiagnostics.concat(diagnostic);
-                    this.mDiagnosticCollection.set(vscode.Uri.file(assertionFile), updatedDiagnostics);
+
+                    //avoid duplication of same diagnostic
+                    const isDuplicateDiagnostic = currentDiagnostics.some((existingDiagnostic) => {
+                        return existingDiagnostic.range.isEqual(diagnostic.range) && existingDiagnostic.message === diagnostic.message;
+                    });
+
+                    if (!isDuplicateDiagnostic) {
+                        // add new diagnostic to existing diagnostic-list
+                        const updatedDiagnostics = currentDiagnostics.concat(diagnostic);
+                        this.mDiagnosticCollection.set(vscode.Uri.file(assertionFile), updatedDiagnostics);
+                    }
+
                 }
             } 
             else 
