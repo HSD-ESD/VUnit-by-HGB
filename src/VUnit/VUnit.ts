@@ -193,7 +193,24 @@ export class VUnit {
         if (vunitExportJsonOptions) {
             options.push(vunitExportJsonOptions as string);
         }
-        await this.RunVunit(runPy,options)
+
+        let vunitProcess : any;
+
+        await this.RunVunit(runPy, options, (vunit: ChildProcess) => {
+
+            vunitProcess = vunit;
+            
+            readline
+                .createInterface({
+                    input: vunitProcess.stdout,
+                    terminal: false,
+                })
+                .on('line', (line: string) => {
+                    //TODO: check for python errors
+                    
+                });
+            
+            })
             .then(() => {
                 vunitData = JSON.parse(fs.readFileSync(vunitJson, 'utf-8'));
                 fs.unlinkSync(vunitJson);
