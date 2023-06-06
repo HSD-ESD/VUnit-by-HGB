@@ -183,60 +183,62 @@ export class VUnitTestController {
             this.mTestController.items.delete(id);
         }
 
-        // Create TestTree for each Run.Py-File
-        for(const RunPy of RunPyFiles)
+        //load all RunPy parallely
+        await Promise.all(RunPyFiles.map((RunPy) => this.LoadRunPy(RunPy)));
+    }
+
+    private async LoadRunPy(RunPy : string) : Promise<boolean>
+    {
+        // get data for each run.py-file
+        const exportData: VunitExportData = await this.mVunit.GetVunitData(this.mWorkSpacePath, RunPy);
+
+        //relative path from workspace-folder to run-py-file 
+        const RunPyPath : string = path.relative(this.mWorkSpacePath, RunPy);
+
+        //create test-item for selected run.py
+        let runPyItem : vscode.TestItem = this.mTestController.createTestItem(RunPy,RunPyPath, vscode.Uri.file(RunPy));
+        this.mTestController.items.add(runPyItem);
+
+        // add all testcases to specified run.py-testcase-item
+        for(const testcase of exportData.tests)
         {
-            // get data for each run.py-file
-            const exportData: VunitExportData = await this.mVunit.GetVunitData(this.mWorkSpacePath, RunPy);
+            // split testcase-string into tokens
+            let split = testcase.name.split('.');
+            let libraryName = split[0];
+            let testBenchName = split[1];
+            let testCaseName = split.slice(2).join('.');
 
-            //relative path from workspace-folder to run-py-file 
-            const RunPyPath : string = path.relative(this.mWorkSpacePath, RunPy);
+            // get item of library
+            const libraryID = RunPy.concat("|", libraryName);
+            let libraryItem : vscode.TestItem | undefined = runPyItem.children.get(libraryID);
 
-            //create test-item for selected run.py
-            let runPyItem : vscode.TestItem = this.mTestController.createTestItem(RunPy,RunPyPath, vscode.Uri.file(RunPy));
-            this.mTestController.items.add(runPyItem);
-
-            // add all testcases to specified run.py-testcase-item
-            for(const testcase of exportData.tests)
+            // create node for library if not existing yet
+            if (!libraryItem)
             {
-                // split testcase-string into tokens
-                let split = testcase.name.split('.');
-                let libraryName = split[0];
-                let testBenchName = split[1];
-                let testCaseName = split.slice(2).join('.');
-
-                // get item of library
-                const libraryID = RunPy.concat("|", libraryName);
-                let libraryItem : vscode.TestItem | undefined = runPyItem.children.get(libraryID);
-
-                // create node for library if not existing yet
-                if (!libraryItem)
-                {
-                    libraryItem = this.mTestController.createTestItem(libraryID, libraryName);
-                    runPyItem.children.add(libraryItem);
-                }
-
-                // get item of testbench
-                const testBenchID = RunPy.concat("|", libraryName, ".", testBenchName);
-                let testBenchItem : vscode.TestItem | undefined = libraryItem.children.get(testBenchID);
-                
-                //create node for testbench if not existing yet
-                if (!testBenchItem)
-                {
-                    testBenchItem = this.mTestController.createTestItem(testBenchID, testBenchName, vscode.Uri.file(testcase.location.file_name));
-                    libraryItem.children.add(testBenchItem);
-                }
-
-                //create node for testcase
-                const testCaseID : string = RunPy.concat("|", testcase.name);
-                const testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testCaseID, testCaseName, vscode.Uri.file(testcase.location.file_name));
-                testCaseItem.range = GetTestbenchRange(testcase.location.file_name, testcase.location.offset, testcase.location.length);
-
-                testBenchItem.children.add(testCaseItem);
-                
+                libraryItem = this.mTestController.createTestItem(libraryID, libraryName);
+                runPyItem.children.add(libraryItem);
             }
 
+            // get item of testbench
+            const testBenchID = RunPy.concat("|", libraryName, ".", testBenchName);
+            let testBenchItem : vscode.TestItem | undefined = libraryItem.children.get(testBenchID);
+            
+            //create node for testbench if not existing yet
+            if (!testBenchItem)
+            {
+                testBenchItem = this.mTestController.createTestItem(testBenchID, testBenchName, vscode.Uri.file(testcase.location.file_name));
+                libraryItem.children.add(testBenchItem);
+            }
+
+            //create node for testcase
+            const testCaseID : string = RunPy.concat("|", testcase.name);
+            const testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testCaseID, testCaseName, vscode.Uri.file(testcase.location.file_name));
+            testCaseItem.range = GetTestbenchRange(testcase.location.file_name, testcase.location.offset, testcase.location.length);
+
+            testBenchItem.children.add(testCaseItem);
         }
+
+        return true;
     }
 
     
