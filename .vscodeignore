@@ -1,4 +1,5 @@
 **/*.map
+.vscode
 package-lock.json
 tsconfig.json
 .vscode/**
