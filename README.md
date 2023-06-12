@@ -4,6 +4,9 @@ Run your [VUnit](https://vunit.github.io/) tests from the Sidebar of Visual Stud
 
 ![UI example](/img/screenshot.png?raw=true)
 
+# Contributors
+Author: Jakob Jungreuthmayer
+
 # Features
 
 - Listing all VUnit-Testcases
