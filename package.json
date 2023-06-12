@@ -3,14 +3,14 @@
     "displayName": "VUnit by HGB",
     "description": "Run your VUnit tests from the sidebar",
     "author": "Jakob Jungreuthmayer",
-    "publisher": "Jakob Jungreuthmayer",
+    "publisher": "P2L2",
     "license": "SEE LICENSE IN LICENSE",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "preview": true,
     "icon": "img/vunit-by-hgb-logo.png",
     "repository": {
         "type": "git",
-        "url": "https://github.com/jakobjung10/vunit-by-hgb"
+        "url": "https://github.com/HSD-ESD/VUnit-by-HGB"
     },
     "engines": {
         "vscode": "^1.59.0"
