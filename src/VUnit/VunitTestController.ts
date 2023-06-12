@@ -439,7 +439,7 @@ export class VUnitTestController {
             const diagnostic: vscode.Diagnostic = {
                 severity: vscode.DiagnosticSeverity.Error,
                 range: new vscode.Range(assertionLineNumber - 1, 0, assertionLineNumber - 1, 0),
-                message: 'Assertion violation detected.',
+                message: 'Assertion violation.',
                 source: 'VUnit',
             };
 

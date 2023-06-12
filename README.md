@@ -4,6 +4,9 @@ Run your [VUnit](https://vunit.github.io/) tests from the Sidebar of Visual Stud
 
 ![UI example](/img/screenshot.png?raw=true)
 
+# Contributors
+Author: Jakob Jungreuthmayer
+
 # Features
 
 - Listing all VUnit-Testcases
@@ -44,6 +47,7 @@ ID                                   | Command
 [VUnit Test Explorer](https://github.com/Bochlin/vunit-test-explorer)
 
 Fork of VUnit Test Explorer by Henrik Bohlin, since the original project is no longer maintained.
+
 
 Differences:
 ---
