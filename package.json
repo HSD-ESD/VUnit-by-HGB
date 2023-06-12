@@ -2,10 +2,10 @@
     "name": "vunit-by-hgb",
     "displayName": "VUnit by HGB",
     "description": "Run your VUnit tests from the sidebar",
-    "author": "jakobjung10",
-    "publisher": "jakobjung10",
+    "author": "Jakob Jungreuthmayer",
+    "publisher": "Jakob Jungreuthmayer",
     "license": "SEE LICENSE IN LICENSE",
-    "version": "0.4.1",
+    "version": "0.0.1",
     "preview": true,
     "icon": "img/vunit-by-hgb-logo.png",
     "repository": {
