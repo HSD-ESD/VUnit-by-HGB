@@ -109,16 +109,18 @@ export class VUnitTestController {
     {
         const run : vscode.TestRun = this.mTestController.createTestRun(request);
 
+        this.mDiagnosticCollection.clear();
+
         //specific selection of elements from User-Interface should be run
         if (request.include) {
 
             //set all selected testcases to "running-mode" for spinning wheel in UI
             await Promise.all(request.include.map(t => this.runNode(t, request, run)));
 
-            //execute selected test-cases in console
+            //execute selected test-cases on console
             if (request.profile?.kind === vscode.TestRunProfileKind.Run)
             {
-                await this.RunVunitTestsDefault(request.include[0], run);
+                await this.RunVunitTestsShell(request.include[0], run);
             }
             //execute selected test-cases in GUI
             else if (request.profile?.kind === vscode.TestRunProfileKind.Debug)
@@ -129,20 +131,21 @@ export class VUnitTestController {
         } 
         // all testcases should be run
         else {
-
-            this.mDiagnosticCollection.clear();
             
             //get all top-level items (all run.py-scripts)
             const TopLevelItems : vscode.TestItem[] = mapTestItems(this.mTestController.items, item => item); 
-            //set all testcases to "running-mode" for spinning wheel in UI
-            TopLevelItems.map(t => this.runNode(t, request, run));
 
-            //execute all test-cases in console
+            //set all testcases to "enqueued-mode" in UI
+            Promise.all(TopLevelItems.map(t => this.enqueueNode(t, request, run)));
+
+            //execute all test-cases on console
             if (request.profile?.kind === vscode.TestRunProfileKind.Run)
             {
                 for(const item of TopLevelItems)
                 {
-                    await this.RunVunitTestsDefault(item, run);
+                    //set all selected testcases to "running-mode" for spinning wheel in UI
+                    await this.runNode(item, request, run);
+                    await this.RunVunitTestsShell(item, run);
                 }
             }
             //execute all test-cases in GUI
@@ -154,7 +157,7 @@ export class VUnitTestController {
                 }
             }
         }
-    
+        
         run.end();
     }
 
@@ -254,7 +257,7 @@ export class VUnitTestController {
         }
 
         if (node.children.size > 0) 
-        {
+        {  
             // recurse and run all children if this is a "suite"
             Promise.all(mapTestItems(node.children, t => this.runNode(t, request, run)));
         }
@@ -263,6 +266,28 @@ export class VUnitTestController {
             //bottom-item was reached -> set this testcase to mode "running"
             //(spinning wheel in User-Interface)
             run.started(node);
+        }
+    }
+
+    private async enqueueNode(
+        node: vscode.TestItem,
+	    request: vscode.TestRunRequest,
+	    run: vscode.TestRun,
+    ): Promise<void> 
+    {
+        // check for filter on test
+        if (request.exclude?.includes(node)) {
+            return;
+        }
+
+        if (node.children.size > 0) 
+        {
+            // recurse and enqueue all children if this is a "suite"
+            Promise.all(mapTestItems(node.children, t => this.enqueueNode(t, request, run)));
+        }
+        else
+        {
+            run.enqueued(node);
         }
     }
 
@@ -284,7 +309,7 @@ export class VUnitTestController {
         return undefined;
     }
 
-    private async RunVunitTestsDefault(node : vscode.TestItem, run: vscode.TestRun) : Promise<void>
+    private async RunVunitTestsShell(node : vscode.TestItem, run: vscode.TestRun) : Promise<void>
     {
         //extract run.py path
         const runPyPath = node.id.split('|')[0];
