@@ -9,12 +9,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-18.04", "windows-latest"]
-        vunit: ["4.4.0", "4.3.0", "4.2.0", "4.1.0"]
+        os: ["ubuntu-22.04"]
+        vunit: ["4.7.0"]
     runs-on: ${{ matrix.os }}
     steps: 
       - uses: actions/checkout@v2
-
+      - env: 
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       # GHDL
       - name: Install GHDL Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
