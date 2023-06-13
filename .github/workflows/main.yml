@@ -9,16 +9,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04"]
+        os: ["ubuntu-22.04", "windows-latest"]
         vunit: ["4.7.0"]
     runs-on: ${{ matrix.os }}
     steps: 
       - uses: actions/checkout@v2
-      - env: 
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       # GHDL
       - name: Install GHDL Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
+        env: 
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
         run: |
           mkdir ghdl
           cd ghdl
@@ -32,6 +32,8 @@ jobs:
           cd ..
       - name: Install GHDL Windows
         if: startsWith(matrix.os, 'windows')
+        env: 
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
         run: |
           mkdir ghdl
           cd ghdl
