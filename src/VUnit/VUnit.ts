@@ -52,7 +52,7 @@ export class VUnit {
     public async GetVunitVersion(runPy : string): Promise<string> {
         return new Promise((resolve, reject) => {
             let version: string | undefined;
-            this.RunVunit(runPy, ['--version'], (vunit: ChildProcess): void => {
+            this.Run(runPy, ['--version'], (vunit: ChildProcess): void => {
                 let proc: any = vunit;
                 readline
                     .createInterface({
@@ -88,7 +88,7 @@ export class VUnit {
         return runPy;
     }
 
-    public async RunVunit(
+    public async Run(
         runPy: string,
         vunitArgs: string[],
         vunitProcess: (vunit: ChildProcess) => void = () => {}
@@ -196,7 +196,7 @@ export class VUnit {
 
         let vunitProcess : any;
 
-        await this.RunVunit(runPy, options, (vunit: ChildProcess) => {
+        await this.Run(runPy, options, (vunit: ChildProcess) => {
 
             vunitProcess = vunit;
             

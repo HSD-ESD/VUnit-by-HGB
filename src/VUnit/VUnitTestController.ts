@@ -37,7 +37,7 @@ export class VUnitTestController {
     private mDebugProfile : vscode.TestRunProfile;
 
     private mWorkSpacePath : string = "";
-    private mVunit : VUnit;
+    private mVUnit : VUnit;
 
     //--------------------------------------------
 	//Public Methods
@@ -50,10 +50,10 @@ export class VUnitTestController {
         this.mDiagnosticCollection = vscode.languages.createDiagnosticCollection('VUnitByHGB.VUnitErrors');
 
         //initialize specific members
-        this.mVunit = new VUnit();
+        this.mVUnit = new VUnit();
 
         //get workspace-path of extension
-        const workSpacePath = this.mVunit.GetWorkspaceRoot(); 
+        const workSpacePath = this.mVUnit.GetWorkspaceRoot(); 
         if(workSpacePath) { this.mWorkSpacePath = workSpacePath; }
         // watch folder of extension
         const testPath = path.join(this.mWorkSpacePath, "*");
@@ -89,10 +89,20 @@ export class VUnitTestController {
         this.mContext.subscriptions.push(this.mTestController);
 
         //create profile for running Tests
-        this.mRunProfile = this.mTestController.createRunProfile('Run', vscode.TestRunProfileKind.Run, request => this.RunTests(request), true);
+        this.mRunProfile = this.mTestController.createRunProfile(
+                                'Run', 
+                                vscode.TestRunProfileKind.Run, 
+                                (request, token) => {
+                                    this.RunTests(false, request, token);
+                            });
         
         //create profile for debugging tests
-        this.mDebugProfile = this.mTestController.createRunProfile('Debug', vscode.TestRunProfileKind.Debug, request => this.RunTests(request), true);
+        this.mDebugProfile = this.mTestController.createRunProfile(
+                                'Debug',
+                                vscode.TestRunProfileKind.Debug,
+                                (request, token) => {
+                                    this.RunTests(true, request, token);
+                            });
 
         //resolve-handler for initial loading of testcases in User-Interface
         this.mTestController.resolveHandler = load => {
@@ -104,8 +114,12 @@ export class VUnitTestController {
             this.LoadTests();
         };
     }
-
-    public async RunTests(request : vscode.TestRunRequest) : Promise<void>
+    
+    public async RunTests(
+        shouldDebug: boolean,
+        request: vscode.TestRunRequest,
+        token: vscode.CancellationToken
+    ) : Promise<void>
     {
         const run : vscode.TestRun = this.mTestController.createTestRun(request);
 
@@ -115,17 +129,17 @@ export class VUnitTestController {
         if (request.include) {
 
             //set all selected testcases to "running-mode" for spinning wheel in UI
-            await Promise.all(request.include.map(t => this.runNode(t, request, run)));
+            await Promise.all(request.include.map(t => this.traverseNode(t, request, run, run.started)));
 
             //execute selected test-cases on console
-            if (request.profile?.kind === vscode.TestRunProfileKind.Run)
+            if (!shouldDebug)
             {
-                await this.RunVunitTestsShell(request.include[0], run);
+                await this.RunVUnitTestsShell(request.include[0], request, run);
             }
             //execute selected test-cases in GUI
-            else if (request.profile?.kind === vscode.TestRunProfileKind.Debug)
+            else if (shouldDebug)
             {
-                await this.RunVunitTestsGUI(request.include[0], run);
+                await this.RunVUnitTestsGUI(request.include[0], request, run);
             }
 
         } 
@@ -136,24 +150,24 @@ export class VUnitTestController {
             const TopLevelItems : vscode.TestItem[] = mapTestItems(this.mTestController.items, item => item); 
 
             //set all testcases to "enqueued-mode" in UI
-            Promise.all(TopLevelItems.map(t => this.enqueueNode(t, request, run)));
+            Promise.all(TopLevelItems.map(t => this.traverseNode(t, request, run, run.enqueued)));
 
             //execute all test-cases on console
-            if (request.profile?.kind === vscode.TestRunProfileKind.Run)
+            if (!shouldDebug)
             {
                 for(const item of TopLevelItems)
                 {
                     //set all selected testcases to "running-mode" for spinning wheel in UI
-                    await this.runNode(item, request, run);
-                    await this.RunVunitTestsShell(item, run);
+                    await this.traverseNode(item, request, run, run.started);
+                    await this.RunVUnitTestsShell(item, request, run);
                 }
             }
             //execute all test-cases in GUI
-            else if (request.profile?.kind === vscode.TestRunProfileKind.Debug)
+            else if (shouldDebug)
             {
                 for(const item of TopLevelItems)
                 {
-                    await this.RunVunitTestsGUI(item, run);
+                    await this.RunVUnitTestsGUI(item, request, run);
                 }
             }
         }
@@ -166,12 +180,12 @@ export class VUnitTestController {
         
 
         //Find all Run.Py-Files in WorkSpace
-        const RunPyFiles : string[] = await this.mVunit.FindRunPy((vscode.workspace.workspaceFolders || [])[0]);
+        const RunPyFiles : string[] = await this.mVUnit.FindRunPy((vscode.workspace.workspaceFolders || [])[0]);
 
         if (this.mTestController.items.size === 0)
         {
             //just pick the first run.py of all found run.py-files and get vunit-version
-            await this.mVunit.GetVunitVersion(RunPyFiles[0])
+            await this.mVUnit.GetVunitVersion(RunPyFiles[0])
                 .then((res) => {
                     this.mOutputChannel.append(`Found VUnit version ${res}`);
                 })
@@ -193,7 +207,7 @@ export class VUnitTestController {
     private async LoadRunPy(RunPy : string) : Promise<boolean>
     {
         // get data for each run.py-file
-        const exportData: VunitExportData = await this.mVunit.GetVunitData(this.mWorkSpacePath, RunPy);
+        const exportData: VunitExportData = await this.mVUnit.GetVunitData(this.mWorkSpacePath, RunPy);
 
         //relative path from workspace-folder to run-py-file 
         const RunPyPath : string = path.relative(this.mWorkSpacePath, RunPy);
@@ -212,7 +226,7 @@ export class VUnitTestController {
             let testCaseName = split.slice(2).join('.');
 
             // get item of library
-            const libraryID = RunPy.concat("|", libraryName);
+            const libraryID = getLibraryItemId(RunPy, libraryName);
             let libraryItem : vscode.TestItem | undefined = runPyItem.children.get(libraryID);
 
             // create node for library if not existing yet
@@ -223,7 +237,7 @@ export class VUnitTestController {
             }
 
             // get item of testbench
-            const testBenchID = RunPy.concat("|", libraryName, ".", testBenchName);
+            const testBenchID = getTestBenchItemId(RunPy, libraryName, testBenchName);
             let testBenchItem : vscode.TestItem | undefined = libraryItem.children.get(testBenchID);
             
             //create node for testbench if not existing yet
@@ -234,7 +248,7 @@ export class VUnitTestController {
             }
 
             //create node for testcase
-            const testCaseID : string = RunPy.concat("|", testcase.name);
+            const testCaseID : string = getTestCaseItemId(RunPy, testcase.name);
             const testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testCaseID, testCaseName, vscode.Uri.file(testcase.location.file_name));
             testCaseItem.range = GetTestbenchRange(testcase.location.file_name, testcase.location.offset, testcase.location.length);
 
@@ -244,50 +258,25 @@ export class VUnitTestController {
         return true;
     }
 
-    
-    private async runNode(
+    private async traverseNode(
         node: vscode.TestItem,
 	    request: vscode.TestRunRequest,
 	    run: vscode.TestRun,
-    ): Promise<void> 
+        callback : (node: vscode.TestItem) => void
+    ) : Promise<void>
     {
-        // check for filter on test
         if (request.exclude?.includes(node)) {
             return;
         }
 
-        if (node.children.size > 0) 
-        {  
-            // recurse and run all children if this is a "suite"
-            Promise.all(mapTestItems(node.children, t => this.runNode(t, request, run)));
+        if (node.children.size > 0)
+        {
+            // recurse all children if this is a "suite"
+            await Promise.all(mapTestItems(node.children, t => this.traverseNode(t, request, run, callback)));
         }
         else
         {
-            //bottom-item was reached -> set this testcase to mode "running"
-            //(spinning wheel in User-Interface)
-            run.started(node);
-        }
-    }
-
-    private async enqueueNode(
-        node: vscode.TestItem,
-	    request: vscode.TestRunRequest,
-	    run: vscode.TestRun,
-    ): Promise<void> 
-    {
-        // check for filter on test
-        if (request.exclude?.includes(node)) {
-            return;
-        }
-
-        if (node.children.size > 0) 
-        {
-            // recurse and enqueue all children if this is a "suite"
-            Promise.all(mapTestItems(node.children, t => this.enqueueNode(t, request, run)));
-        }
-        else
-        {
-            run.enqueued(node);
+            callback(node);
         }
     }
 
@@ -309,7 +298,7 @@ export class VUnitTestController {
         return undefined;
     }
 
-    private async RunVunitTestsShell(node : vscode.TestItem, run: vscode.TestRun) : Promise<void>
+    private async RunVUnitTestsShell(node : vscode.TestItem, request: vscode.TestRunRequest, run: vscode.TestRun) : Promise<void>
     {
         //extract run.py path
         const runPyPath = node.id.split('|')[0];
@@ -345,10 +334,25 @@ export class VUnitTestController {
         let IsAssertionFailure : Boolean = false;
 
         //launch vunit-process with given arguments from above
-        await this.mVunit.RunVunit(runPyPath, options, (vunit: ChildProcess) => {
-
-            vunitProcess = vunit;
+        await this.mVUnit.Run(runPyPath, options, (vunit: ChildProcess) => {
             
+            // handle cancellation of test-suite
+            let disposable = run.token.onCancellationRequested(() => {
+                vunit.kill();
+                this.traverseNode(node, request, run, run.skipped);
+            });
+            this.mContext.subscriptions.push(disposable);
+
+            // append output to testcase
+            vunit.stdout?.on('data', (data : string) => {
+                run.appendOutput(data);
+            });
+            vunit.stderr?.on('data', (data : string) => {
+                run.appendOutput(data);
+            });
+            
+            vunitProcess = vunit;
+
             readline
                 .createInterface({
                     input: vunitProcess.stdout,
@@ -356,13 +360,18 @@ export class VUnitTestController {
                 })
                 .on('line', (line: string) => {
                     
+                    if (run.token.isCancellationRequested.valueOf())
+                    {
+
+                    }
+
                     //check for success/failure of VUnit-TestCase
                     this.MatchTestCaseStatus(line, node, run, runPyPath);
 
                     //match VUnit-Errors
                     if(vscode.workspace.getConfiguration().get('vunit-by-hgb.matchProblems'))
                     {
-                        this.mVunit.MatchProblems(line, this.mDiagnosticCollection); 
+                        this.mVUnit.MatchProblems(line, this.mDiagnosticCollection); 
                     }
 
                     //match VUnit-Assertion-Failure
@@ -384,12 +393,12 @@ export class VUnitTestController {
             vunitProcess = 0;
         })
         .catch((err) => {
-            run.failed(node, new vscode.TestMessage("Error in Execution of " + runPyPath));
+            run.errored(node, new vscode.TestMessage("Error in Execution of " + runPyPath));
         });
 
     }
 
-    private async RunVunitTestsGUI(node: vscode.TestItem, run: vscode.TestRun) : Promise<void>
+    private async RunVUnitTestsGUI(node: vscode.TestItem, request: vscode.TestRunRequest, run: vscode.TestRun) : Promise<void>
     {
         //extract run.py path
         const runPyPath = node.id.split('|')[0];
@@ -420,7 +429,7 @@ export class VUnitTestController {
             options.push(vunitOptions as string);
         }
         
-        await this.mVunit.RunVunit(runPyPath, options);
+        await this.mVUnit.Run(runPyPath, options);
     }
 
     private MatchTestCaseStatus(line : string, node : vscode.TestItem, run : vscode.TestRun, runPyPath : string) : void
@@ -430,11 +439,13 @@ export class VUnitTestController {
         const result = cVunitTestEnd.exec(line);
         if (result) {
 
+            const testCaseItemId : string = getTestCaseItemId(runPyPath, result[2]);
+
             //evaluate result
             if(result[1] === 'pass')
             {
                 //get related test-item
-                const item = this.findNode(runPyPath + "|" + result[2], node);
+                const item = this.findNode(testCaseItemId, node);
                 if(item) 
                 { 
                     run.passed(item); 
@@ -443,7 +454,7 @@ export class VUnitTestController {
             else
             {
                 //get related test-item
-                const item = this.findNode(runPyPath + "|" + result[2], node);
+                const item = this.findNode(testCaseItemId, node);
                 if(item) 
                 { 
                     run.failed(item, new vscode.TestMessage(result[2] + " failed!")); 
@@ -511,6 +522,24 @@ const mapTestItems = <T>(items: vscode.TestItemCollection, mapper: (t: vscode.Te
 	items.forEach(t => result.push(mapper(t)));
 	return result;
 };
+
+function getTestCaseItemId(runPyPath : string, testCaseName : string) : string
+{
+    const testCaseId : string = runPyPath.concat("|", testCaseName);
+    return testCaseId;
+}
+
+function getLibraryItemId(runPyPath : string, libraryName : string) : string 
+{
+    const libraryItemId : string = runPyPath.concat("|", libraryName);
+    return libraryItemId;
+}
+
+function getTestBenchItemId(runPyPath : string, libraryName : string, testBenchName : string) : string 
+{
+    const testBenchItemId : string = runPyPath.concat("|", libraryName, ".", testBenchName);
+    return testBenchItemId;
+}
 
 function GetTestbenchRange(filePath : string, offset : number, testcaseNameLength : number) : vscode.Range
 {
