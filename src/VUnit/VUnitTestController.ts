@@ -129,7 +129,7 @@ export class VUnitTestController {
         if (request.include) {
 
             //set all selected testcases to "running-mode" for spinning wheel in UI
-            await Promise.all(request.include.map(t => this.traverseNode(t, request, run, run.started)));
+            await Promise.all(request.include.map(t => this.traverseNode(t, request, run, startNode)));
 
             //execute selected test-cases on console
             if (!shouldDebug)
@@ -150,7 +150,7 @@ export class VUnitTestController {
             const TopLevelItems : vscode.TestItem[] = mapTestItems(this.mTestController.items, item => item); 
 
             //set all testcases to "enqueued-mode" in UI
-            Promise.all(TopLevelItems.map(t => this.traverseNode(t, request, run, run.enqueued)));
+            Promise.all(TopLevelItems.map(t => this.traverseNode(t, request, run, enqueueNode)));
 
             //execute all test-cases on console
             if (!shouldDebug)
@@ -158,7 +158,7 @@ export class VUnitTestController {
                 for(const item of TopLevelItems)
                 {
                     //set all selected testcases to "running-mode" for spinning wheel in UI
-                    await this.traverseNode(item, request, run, run.started);
+                    await this.traverseNode(item, request, run, startNode);
                     await this.RunVUnitTestsShell(item, request, run);
                 }
             }
@@ -262,7 +262,7 @@ export class VUnitTestController {
         node: vscode.TestItem,
 	    request: vscode.TestRunRequest,
 	    run: vscode.TestRun,
-        callback : (node: vscode.TestItem) => void
+        callback : (node: vscode.TestItem, run : vscode.TestRun) => void
     ) : Promise<void>
     {
         if (request.exclude?.includes(node)) {
@@ -276,7 +276,7 @@ export class VUnitTestController {
         }
         else
         {
-            callback(node);
+            callback(node, run);
         }
     }
 
@@ -339,7 +339,7 @@ export class VUnitTestController {
             // handle cancellation of test-suite
             let disposable = run.token.onCancellationRequested(() => {
                 vunit.kill();
-                this.traverseNode(node, request, run, run.skipped);
+                this.traverseNode(node, request, run, skipRunningNode);
             });
             this.mContext.subscriptions.push(disposable);
 
@@ -359,11 +359,6 @@ export class VUnitTestController {
                     terminal: false,
                 })
                 .on('line', (line: string) => {
-                    
-                    if (run.token.isCancellationRequested.valueOf())
-                    {
-
-                    }
 
                     //check for success/failure of VUnit-TestCase
                     this.MatchTestCaseStatus(line, node, run, runPyPath);
@@ -429,7 +424,14 @@ export class VUnitTestController {
             options.push(vunitOptions as string);
         }
         
-        await this.mVUnit.Run(runPyPath, options);
+        await this.mVUnit.Run(runPyPath, options, (vunit: ChildProcess) => { 
+            // handle cancellation of test-suite
+            let disposable = run.token.onCancellationRequested(() => {
+                vunit.kill();
+            });
+            this.mContext.subscriptions.push(disposable);
+        });
+
     }
 
     private MatchTestCaseStatus(line : string, node : vscode.TestItem, run : vscode.TestRun, runPyPath : string) : void
@@ -548,6 +550,24 @@ function GetTestbenchRange(filePath : string, offset : number, testcaseNameLengt
     const testCaseStartLine = linesUntilTestcase.length - 1;
     //const testcaseEndLine : number = testBenchSrc.substring(offset, testBenchSrc.length).split(/\r?\n/).findIndex(line => IsTestbenchEnd(line));
     return new vscode.Range(new vscode.Position(testCaseStartLine, 0), new vscode.Position(testCaseStartLine, 0));
+}
+
+function skipRunningNode(node : vscode.TestItem, run : vscode.TestRun) : void {
+
+    if (node.busy)
+    {
+        run.skipped(node);
+    }
+}
+
+function startNode(node : vscode.TestItem, run : vscode.TestRun) : void 
+{
+    run.started(node);
+}
+
+function enqueueNode(node : vscode.TestItem, run : vscode.TestRun) : void 
+{
+    run.enqueued(node);
 }
 
 function IsTestbenchEnd(line : string) : boolean
