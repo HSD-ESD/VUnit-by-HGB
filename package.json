@@ -76,6 +76,11 @@
                     "type": "string",
                     "default": ""
                 },
+                "vunit-by-hgb.showExecutionTime": {
+                    "description": "Display Execution-Time for every testcase ",
+                    "type": "boolean",
+                    "default": true
+                },
                 "vunit-by-hgb.matchProblems": {
                     "description": "Display Errors and Warnings from VUnit as Problems",
                     "type": "boolean",

@@ -16,6 +16,7 @@ import { ChildProcess } from "child_process";
 
 //TestBench-Status-Matcher
 const cVunitTestEnd : RegExp = /(pass|fail) \(.*\) (.*) \(.*\)/;
+const cVunitTimedTestEnd : RegExp = /(pass|fail) \(.*\) (.*) \((\d+(?:\.\d+)?) seconds\)/;
 const cVunitTestStart : RegExp = /Starting (.*)/;
 const cVunitStopped : RegExp = /Stopped at ([^\s]+) line (\d+)/;
 
@@ -320,12 +321,17 @@ export class VUnitTestController {
         //Command-Line-Arguments for VUnit
         let options = [testCaseWildCard, '--no-color', '--exit-0'];
 
+        // read configuration from vscode-settings
         const vunitOptions = vscode.workspace
             .getConfiguration()
             .get('vunit-by-hgb.shellOptions');
         if (vunitOptions) {
             options.push(vunitOptions as string);
-        }   
+        }  
+        
+        const showExecutionTime = vscode.workspace
+            .getConfiguration()
+            .get('vunit-by-hgb.showExecutionTime') as boolean;
 
         //variable for referencing output from vunit-process to analyse its output
         let vunitProcess : any;
@@ -361,7 +367,7 @@ export class VUnitTestController {
                 .on('line', (line: string) => {
 
                     //check for success/failure of VUnit-TestCase
-                    this.MatchTestCaseStatus(line, node, run, runPyPath);
+                    this.MatchTestCaseStatus(line, node, run, runPyPath, showExecutionTime);
 
                     //match VUnit-Errors
                     if(vscode.workspace.getConfiguration().get('vunit-by-hgb.matchProblems'))
@@ -434,34 +440,40 @@ export class VUnitTestController {
 
     }
 
-    private MatchTestCaseStatus(line : string, node : vscode.TestItem, run : vscode.TestRun, runPyPath : string) : void
+    private MatchTestCaseStatus(line : string, node : vscode.TestItem, run : vscode.TestRun, runPyPath : string, showExecutionTime : boolean) : void
     {
+        
+        let testCaseMatcher : RegExp = cVunitTestEnd;
+        if (showExecutionTime)
+        {
+            testCaseMatcher = cVunitTimedTestEnd;
+        }
 
-        //check for pass or fail
-        const result = cVunitTestEnd.exec(line);
+        let result = testCaseMatcher.exec(line);
+
         if (result) {
 
-            const testCaseItemId : string = getTestCaseItemId(runPyPath, result[2]);
+            const status = result[1];
+            const name = result[2];
+            const time = showExecutionTime ? (parseFloat(result[3]) * 1000) : undefined;
+
+            const testCaseItemId : string = getTestCaseItemId(runPyPath, name);
+            //get related test-item
+            const item = this.findNode(testCaseItemId, node);
+
+            if(!item)
+            {
+                return;
+            }
 
             //evaluate result
-            if(result[1] === 'pass')
+            if(status === 'pass')
             {
-                //get related test-item
-                const item = this.findNode(testCaseItemId, node);
-                if(item) 
-                { 
-                    run.passed(item); 
-                }
+                run.passed(item, time);
             }
             else
             {
-                //get related test-item
-                const item = this.findNode(testCaseItemId, node);
-                if(item) 
-                { 
-                    run.failed(item, new vscode.TestMessage(result[2] + " failed!")); 
-                }
-                
+                run.failed(item, new vscode.TestMessage(result[2] + " failed!"), time); 
             }
         }
 
