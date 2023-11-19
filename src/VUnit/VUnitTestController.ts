@@ -172,7 +172,7 @@ export class VUnitTestController {
             const TopLevelItems : vscode.TestItem[] = mapTestItems(this.mTestController.items, item => item); 
 
             //set all testcases to "enqueued-mode" in UI
-            Promise.all(TopLevelItems.map(t => this.traverseNode(t, request, run, enqueueNode)));
+            await Promise.all(TopLevelItems.map(t => this.traverseNode(t, request, run, enqueueNode)));
 
             //execute all test-cases on console
             if (!shouldDebug)
@@ -235,6 +235,11 @@ export class VUnitTestController {
 
         //load all RunPy parallely
         await Promise.all(RunPyFiles.map((RunPy) => this.LoadRunPy(RunPy)));
+
+        // store top-level-items in alphabetic order
+        const TopLevelItems : vscode.TestItem[] = mapTestItems(this.mTestController.items, item => item); 
+        TopLevelItems.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+        this.mTestController.items.replace(TopLevelItems);
     }
 
     private async LoadRunPy(RunPy : string) : Promise<boolean>
@@ -376,6 +381,9 @@ export class VUnitTestController {
             
             // handle cancellation of test-suite
             let disposable = run.token.onCancellationRequested(() => {
+                vunit.stdout?.destroy();
+                vunit.stdin?.destroy();
+                vunit.stderr?.destroy();
                 vunit.kill();
                 this.traverseNode(node, request, run, skipRunningNode);
             });
@@ -465,6 +473,9 @@ export class VUnitTestController {
         await this.mVUnit.Run(runPyPath, options, (vunit: ChildProcess) => { 
             // handle cancellation of test-suite
             let disposable = run.token.onCancellationRequested(() => {
+                vunit.stdout?.destroy();
+                vunit.stdin?.destroy();
+                vunit.stderr?.destroy();
                 vunit.kill();
             });
             this.mContext.subscriptions.push(disposable);
@@ -486,10 +497,10 @@ export class VUnitTestController {
         if (result) {
 
             const status = result[1];
-            const name = result[2];
-            const time = showExecutionTime ? (parseFloat(result[3]) * 1000) : undefined;
+            const testcaseName = result[2];
+            const executionTime_ms = showExecutionTime ? (parseFloat(result[3]) * 1000) : undefined;
 
-            const testCaseItemId : string = getTestCaseItemId(runPyPath, name);
+            const testCaseItemId : string = getTestCaseItemId(runPyPath, testcaseName);
             //get related test-item
             const item = this.findNode(testCaseItemId, node);
 
@@ -498,14 +509,16 @@ export class VUnitTestController {
                 return;
             }
 
+            item.busy = false;
+
             //evaluate result
             if(status === 'pass')
             {
-                run.passed(item, time);
+                run.passed(item, executionTime_ms);
             }
             else
             {
-                run.failed(item, new vscode.TestMessage(result[2] + " failed!"), time); 
+                run.failed(item, new vscode.TestMessage(result[2] + " failed!"), executionTime_ms); 
             }
         }
 
@@ -596,10 +609,11 @@ function GetTestbenchRange(filePath : string, offset : number, testcaseNameLengt
     return new vscode.Range(new vscode.Position(testCaseStartLine, 0), new vscode.Position(testCaseStartLine, 0));
 }
 
-function skipRunningNode(node : vscode.TestItem, run : vscode.TestRun) : void {
-
+function skipRunningNode(node : vscode.TestItem, run : vscode.TestRun) : void 
+{
     if (node.busy)
     {
+        node.busy = false;
         run.skipped(node);
     }
 }
@@ -607,6 +621,7 @@ function skipRunningNode(node : vscode.TestItem, run : vscode.TestRun) : void {
 function startNode(node : vscode.TestItem, run : vscode.TestRun) : void 
 {
     run.started(node);
+    node.busy = true;
 }
 
 function enqueueNode(node : vscode.TestItem, run : vscode.TestRun) : void 

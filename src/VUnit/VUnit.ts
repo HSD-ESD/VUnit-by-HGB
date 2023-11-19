@@ -85,6 +85,9 @@ export class VUnit {
         let runPy: string[] = results.map((file) => {
             return file.fsPath;
         });
+
+        runPy.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
         return runPy;
     }
 
