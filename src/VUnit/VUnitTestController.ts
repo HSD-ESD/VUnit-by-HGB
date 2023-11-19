@@ -139,8 +139,29 @@ export class VUnitTestController {
             }
             //execute selected test-cases in GUI
             else if (shouldDebug)
-            {
-                await this.RunVUnitTestsGUI(request.include[0], request, run);
+            {   
+                
+                if (request.include[0].children.size > 0)
+                {
+                    // read configuration from vscode-settings
+                    const multipleGuiTestcases = vscode.workspace
+                        .getConfiguration()
+                        .get('vunit-by-hgb.execute-multiple-gui-testcases') as boolean;
+
+                    if (!multipleGuiTestcases) 
+                    {
+                        vscode.window.showErrorMessage("Executing multiple testcases in GUI-Mode: disabled!");
+                    }
+                    else
+                    {
+                        await this.RunVUnitTestsGUI(request.include[0], request, run);
+                    }
+                }
+                else
+                {
+                    await this.RunVUnitTestsGUI(request.include[0], request, run);
+                }
+
             }
 
         } 
@@ -166,9 +187,21 @@ export class VUnitTestController {
             //execute all test-cases in GUI
             else if (shouldDebug)
             {
-                for(const item of TopLevelItems)
+                // read configuration from vscode-settings
+                const multipleGuiTestcases = vscode.workspace
+                    .getConfiguration()
+                    .get('vunit-by-hgb.execute-multiple-gui-testcases') as boolean;
+
+                if (!multipleGuiTestcases) 
                 {
-                    await this.RunVUnitTestsGUI(item, request, run);
+                    vscode.window.showErrorMessage("Executing all testcases in GUI-Mode: disabled!");
+                }
+                else
+                {
+                    for(const item of TopLevelItems)
+                    {
+                        await this.RunVUnitTestsGUI(item, request, run);
+                    }
                 }
             }
         }
@@ -179,7 +212,6 @@ export class VUnitTestController {
     public async LoadTests() : Promise<void>
     {
         
-
         //Find all Run.Py-Files in WorkSpace
         const RunPyFiles : string[] = await this.mVUnit.FindRunPy((vscode.workspace.workspaceFolders || [])[0]);
 

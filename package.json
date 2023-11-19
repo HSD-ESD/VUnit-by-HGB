@@ -81,6 +81,11 @@
                     "type": "boolean",
                     "default": true
                 },
+                "vunit-by-hgb.execute-multiple-gui-testcases": {
+                    "description": "Executing multiple GUI-Testcases at once",
+                    "type": "boolean",
+                    "default": false
+                },
                 "vunit-by-hgb.matchProblems": {
                     "description": "Display Errors and Warnings from VUnit as Problems",
                     "type": "boolean",
