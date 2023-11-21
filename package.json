@@ -6,7 +6,6 @@
     "publisher": "P2L2",
     "license": "SEE LICENSE IN LICENSE",
     "version": "1.0.3",
-    "preview": true,
     "icon": "img/vunit-by-hgb-logo.png",
     "repository": {
         "type": "git",
@@ -49,11 +48,11 @@
             "type": "object",
             "title": "VUnit by HGB",
             "properties": {
-                "vunit-by-hgb.runpy": {
-                    "title": "run.py",
-                    "description": "Path to VUnit python script (run.py) relative to workspaceFolder.",
+                "vunit-by-hgb.scriptname": {
+                    "title": "Script-Name",
+                    "description": "Default name for VUnit-Scripts",
                     "type": "string",
-                    "scope": "window"
+                    "default": "run.py"
                 },
                 "vunit-by-hgb.python": {
                     "title": "Python executable",
@@ -81,7 +80,7 @@
                     "type": "boolean",
                     "default": true
                 },
-                "vunit-by-hgb.execute-multiple-gui-testcases": {
+                "vunit-by-hgb.executeMultipleGuiTestcases": {
                     "description": "Executing multiple GUI-Testcases at once",
                     "type": "boolean",
                     "default": false

@@ -49,10 +49,10 @@ export class VUnit {
         this.mOutputChannel = vscode.window.createOutputChannel("VUnitByHGB.VUnit");
     }
 
-    public async GetVunitVersion(runPy : string): Promise<string> {
+    public async GetVersion(vunitScript : string): Promise<string> {
         return new Promise((resolve, reject) => {
             let version: string | undefined;
-            this.Run(runPy, ['--version'], (vunit: ChildProcess): void => {
+            this.Run(vunitScript, ['--version'], (vunit: ChildProcess): void => {
                 let proc: any = vunit;
                 readline
                     .createInterface({
@@ -75,24 +75,32 @@ export class VUnit {
         });
     }
 
-    public async FindRunPy(
-        workspaceFolder: vscode.WorkspaceFolder
-    ): Promise<string[]> {
+    public async FindScripts(workspaceFolder : vscode.WorkspaceFolder): Promise<string[]> 
+    {
+        const vunitScriptName : string | undefined = vscode.workspace.getConfiguration().get("vunit-by-hgb.scriptname");
+        let vunitScripts: string[] = new Array<string>();
+
+        if (!vunitScriptName)
+        {
+            return vunitScripts;
+        }
+
         let results = await vscode.workspace.findFiles(
-            new vscode.RelativePattern(workspaceFolder, '**/run.py'),
+            new vscode.RelativePattern(workspaceFolder, `**/${vunitScriptName}`),
             '**/{vunit,examples,acceptance/artificial}/{vhdl,verilog}'
         );
-        let runPy: string[] = results.map((file) => {
+
+        vunitScripts = results.map((file) => {
             return file.fsPath;
         });
 
-        runPy.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        vunitScripts.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-        return runPy;
+        return vunitScripts;
     }
 
     public async Run(
-        runPy: string,
+        vunitScript: string,
         vunitArgs: string[],
         vunitProcess: (vunit: ChildProcess) => void = () => {}
     ): Promise<string> {
@@ -101,22 +109,22 @@ export class VUnit {
             return new Promise((resolve, reject) => {
                 if (!this.GetWorkspaceRoot()) {
                     return reject(new Error('Workspace root not defined.'));
-                } else if (!runPy) {
+                } else if (!vunitScript) {
                     return reject(
                         new Error('Unable to determine path of VUnit run script.')
                     );
-                } else if (!fs.existsSync(runPy)) {
-                    return reject(Error(`VUnit run script ${runPy} does not exist.`));
+                } else if (!fs.existsSync(vunitScript)) {
+                    return reject(Error(`VUnit run script ${vunitScript} does not exist.`));
                 }
                 const python = vscode.workspace
                     .getConfiguration()
                     .get('vunit-by-hgb.python') as string;
-                const args = ['"' + runPy + '"'].concat(vunitArgs);
+                const args = ['"' + vunitScript + '"'].concat(vunitArgs);
                 this.mOutputChannel.appendLine('');
                 this.mOutputChannel.appendLine('===========================================');
                 this.mOutputChannel.appendLine('Running VUnit: ' + python + ' ' + args.join(' '));
                 let vunit = spawn(python, args, {
-                    cwd: path.dirname(runPy),
+                    cwd: path.dirname(vunitScript),
                     shell: true,
                 });
                 vunit.on('close', (code) => {
@@ -147,44 +155,7 @@ export class VUnit {
         return "";
     }
 
-    public async GetRunPy(): Promise<string> {
-        return new Promise((resolve, reject) => {
-            const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];
-            if (!workspaceFolder) {
-                return reject(
-                    new Error('No workspace folder open when getting run.py')
-                );
-            }
-    
-            const runPyConf = vscode.workspace
-                .getConfiguration()
-                .get('vunit-by-hgb.runpy');
-            if (runPyConf) {
-                resolve(path.join(workspaceFolder.uri.fsPath, runPyConf as string));
-            } else if (vscode.workspace.getConfiguration().get('vunit-by-hgb.findRunPy')) {
-                this.FindRunPy(workspaceFolder).then((res) => {
-                    if (res.length === 0) {
-                        reject(new Error('run.py not found or configured.'));
-                    } else if (res.length === 1) {
-                        resolve(res[0]);
-                    } else {
-                        reject(
-                            new Error(
-                                'Multiple run.py files found in workspace (' +
-                                    res.join(', ') +
-                                    ').'
-                            )
-                        );
-                    }
-                });
-            } else {
-                reject('run.py not found');
-            }
-        });
-    }
-
-    public async GetVunitData(workDir: string, runPy:string): Promise<VunitExportData> {
-        //const runPyDirectory : string = path.dirname(runPy);
+    public async GetData(workDir: string, vunitScript:string): Promise<VunitExportData> {
         const vunitJson = path.join(workDir, `${uuid()}.json`);
         fs.mkdirSync(path.dirname(vunitJson), { recursive: true });
     
@@ -199,7 +170,7 @@ export class VUnit {
 
         let vunitProcess : any;
 
-        await this.Run(runPy, options, (vunit: ChildProcess) => {
+        await this.Run(vunitScript, options, (vunit: ChildProcess) => {
 
             vunitProcess = vunit;
             

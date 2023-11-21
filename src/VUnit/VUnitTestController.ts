@@ -8,6 +8,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import exp = require("constants");
 import readline = require('readline');
+import kill = require('tree-kill');
 import { ChildProcess } from "child_process";
 
 //--------------------------------------------
@@ -29,7 +30,6 @@ export class VUnitTestController {
     //vs-code-members
     private mContext : vscode.ExtensionContext;
     private mOutputChannel : vscode.OutputChannel;
-    private mFolderWatcher : vscode.FileSystemWatcher;
     private mDiagnosticCollection : vscode.DiagnosticCollection;
 
     //specific members
@@ -56,34 +56,6 @@ export class VUnitTestController {
         //get workspace-path of extension
         const workSpacePath = this.mVUnit.GetWorkspaceRoot(); 
         if(workSpacePath) { this.mWorkSpacePath = workSpacePath; }
-        // watch folder of extension
-        const testPath = path.join(this.mWorkSpacePath, "*");
-        this.mFolderWatcher = vscode.workspace.createFileSystemWatcher(path.join(this.mWorkSpacePath, "**/*"));
-        
-        //handle events for FolderWatcher
-        this.mFolderWatcher.onDidCreate( (uri) => {
-            if(uri.fsPath.endsWith("run.py"))
-            {
-                this.LoadTests();
-            }
-        });
-        this.mFolderWatcher.onDidDelete( (uri) => {
-            if(uri.fsPath.endsWith("run.py"))
-            {
-                this.LoadTests();
-            }
-        });
-        this.mFolderWatcher.onDidChange( (uri) => {
-            if(uri.fsPath.endsWith("run.py"))
-            {
-                this.LoadTests();
-            }
-        });
-
-        // Start watching the workspace-folder
-        const disposable = vscode.Disposable.from(this.mFolderWatcher);
-        // Dispose the watcher when extension is not active
-        context.subscriptions.push(disposable);
 
         // create TestController for VUnit
         this.mTestController = vscode.tests.createTestController('vunit-test-controller', 'VUnit TestController');
@@ -114,6 +86,8 @@ export class VUnitTestController {
         this.mTestController.refreshHandler = load => {
             this.LoadTests();
         };
+
+        this.HandleFileEvents();
     }
     
     public async RunTests(
@@ -129,12 +103,11 @@ export class VUnitTestController {
         //specific selection of elements from User-Interface should be run
         if (request.include) {
 
-            //set all selected testcases to "running-mode" for spinning wheel in UI
-            await Promise.all(request.include.map(t => this.traverseNode(t, request, run, startNode)));
-
             //execute selected test-cases on console
             if (!shouldDebug)
             {
+                //set all selected testcases to "running-mode" for spinning wheel in UI
+                await Promise.all(request.include.map(t => this.traverseNode(t, request, run, startNode)));
                 await this.RunVUnitTestsShell(request.include[0], request, run);
             }
             //execute selected test-cases in GUI
@@ -146,7 +119,7 @@ export class VUnitTestController {
                     // read configuration from vscode-settings
                     const multipleGuiTestcases = vscode.workspace
                         .getConfiguration()
-                        .get('vunit-by-hgb.execute-multiple-gui-testcases') as boolean;
+                        .get('vunit-by-hgb.executeMultipleGuiTestcases') as boolean;
 
                     if (!multipleGuiTestcases) 
                     {
@@ -168,7 +141,7 @@ export class VUnitTestController {
         // all testcases should be run
         else {
             
-            //get all top-level items (all run.py-scripts)
+            //get all top-level items (all VUnit-Scripts)
             const TopLevelItems : vscode.TestItem[] = mapTestItems(this.mTestController.items, item => item); 
 
             //set all testcases to "enqueued-mode" in UI
@@ -190,7 +163,7 @@ export class VUnitTestController {
                 // read configuration from vscode-settings
                 const multipleGuiTestcases = vscode.workspace
                     .getConfiguration()
-                    .get('vunit-by-hgb.execute-multiple-gui-testcases') as boolean;
+                    .get('vunit-by-hgb.executeMultipleGuiTestcases') as boolean;
 
                 if (!multipleGuiTestcases) 
                 {
@@ -212,13 +185,13 @@ export class VUnitTestController {
     public async LoadTests() : Promise<void>
     {
         
-        //Find all Run.Py-Files in WorkSpace
-        const RunPyFiles : string[] = await this.mVUnit.FindRunPy((vscode.workspace.workspaceFolders || [])[0]);
+        //Find all VUnit-Scripts in WorkSpace
+        const VUnitScripts : string[] = await this.mVUnit.FindScripts((vscode.workspace.workspaceFolders || [])[0]);
 
         if (this.mTestController.items.size === 0)
         {
-            //just pick the first run.py of all found run.py-files and get vunit-version
-            await this.mVUnit.GetVunitVersion(RunPyFiles[0])
+            //just pick the first VUnit-Script of all found files and get vunit-version
+            await this.mVUnit.GetVersion(VUnitScripts[0])
                 .then((res) => {
                     this.mOutputChannel.append(`Found VUnit version ${res}`);
                 })
@@ -233,8 +206,8 @@ export class VUnitTestController {
             this.mTestController.items.delete(id);
         }
 
-        //load all RunPy parallely
-        await Promise.all(RunPyFiles.map((RunPy) => this.LoadRunPy(RunPy)));
+        //load all VUnit-Scripts parallely
+        await Promise.all(VUnitScripts.map((vunitScript) => this.LoadVUnitScript(vunitScript)));
 
         // store top-level-items in alphabetic order
         const TopLevelItems : vscode.TestItem[] = mapTestItems(this.mTestController.items, item => item); 
@@ -242,19 +215,19 @@ export class VUnitTestController {
         this.mTestController.items.replace(TopLevelItems);
     }
 
-    private async LoadRunPy(RunPy : string) : Promise<boolean>
+    private async LoadVUnitScript(vunitScript : string) : Promise<boolean>
     {
-        // get data for each run.py-file
-        const exportData: VunitExportData = await this.mVUnit.GetVunitData(this.mWorkSpacePath, RunPy);
+        // get data for each VUnit-Script-file
+        const exportData: VunitExportData = await this.mVUnit.GetData(this.mWorkSpacePath, vunitScript);
 
         //relative path from workspace-folder to run-py-file 
-        const RunPyPath : string = path.relative(this.mWorkSpacePath, RunPy);
+        const vunitScriptPath : string = path.relative(this.mWorkSpacePath, vunitScript);
 
-        //create test-item for selected run.py
-        let runPyItem : vscode.TestItem = this.mTestController.createTestItem(RunPy,RunPyPath, vscode.Uri.file(RunPy));
-        this.mTestController.items.add(runPyItem);
+        //create test-item for selected VUnit-Script
+        let vunitScriptItem : vscode.TestItem = this.mTestController.createTestItem(vunitScript,vunitScriptPath, vscode.Uri.file(vunitScript));
+        this.mTestController.items.add(vunitScriptItem);
 
-        // add all testcases to specified run.py-testcase-item
+        // add all testcases to specified VUnit-testcase-item
         for(const testcase of exportData.tests)
         {
             // split testcase-string into tokens
@@ -264,18 +237,18 @@ export class VUnitTestController {
             let testCaseName = split.slice(2).join('.');
 
             // get item of library
-            const libraryID = getLibraryItemId(RunPy, libraryName);
-            let libraryItem : vscode.TestItem | undefined = runPyItem.children.get(libraryID);
+            const libraryID = getLibraryItemId(vunitScript, libraryName);
+            let libraryItem : vscode.TestItem | undefined = vunitScriptItem.children.get(libraryID);
 
             // create node for library if not existing yet
             if (!libraryItem)
             {
                 libraryItem = this.mTestController.createTestItem(libraryID, libraryName);
-                runPyItem.children.add(libraryItem);
+                vunitScriptItem.children.add(libraryItem);
             }
 
             // get item of testbench
-            const testBenchID = getTestBenchItemId(RunPy, libraryName, testBenchName);
+            const testBenchID = getTestBenchItemId(vunitScript, libraryName, testBenchName);
             let testBenchItem : vscode.TestItem | undefined = libraryItem.children.get(testBenchID);
             
             //create node for testbench if not existing yet
@@ -286,7 +259,7 @@ export class VUnitTestController {
             }
 
             //create node for testcase
-            const testCaseID : string = getTestCaseItemId(RunPy, testcase.name);
+            const testCaseID : string = getTestCaseItemId(vunitScript, testcase.name);
             const testCaseItem : vscode.TestItem = this.mTestController.createTestItem(testCaseID, testCaseName, vscode.Uri.file(testcase.location.file_name));
             testCaseItem.range = GetTestbenchRange(testcase.location.file_name, testcase.location.offset, testcase.location.length);
 
@@ -338,8 +311,8 @@ export class VUnitTestController {
 
     private async RunVUnitTestsShell(node : vscode.TestItem, request: vscode.TestRunRequest, run: vscode.TestRun) : Promise<void>
     {
-        //extract run.py path
-        const runPyPath = node.id.split('|')[0];
+        //extract path of VUnit-Script
+        const vunitScriptPath = node.id.split('|')[0];
         //wildcard-appendix
         let wildcardAppendix : string = "";
         //check, if this node is a test-suite
@@ -377,14 +350,11 @@ export class VUnitTestController {
         let IsAssertionFailure : Boolean = false;
 
         //launch vunit-process with given arguments from above
-        await this.mVUnit.Run(runPyPath, options, (vunit: ChildProcess) => {
+        await this.mVUnit.Run(vunitScriptPath, options, (vunit: ChildProcess) => {
             
             // handle cancellation of test-suite
             let disposable = run.token.onCancellationRequested(() => {
-                vunit.stdout?.destroy();
-                vunit.stdin?.destroy();
-                vunit.stderr?.destroy();
-                vunit.kill();
+                killProcess(vunit);
                 this.traverseNode(node, request, run, skipRunningNode);
             });
             this.mContext.subscriptions.push(disposable);
@@ -407,7 +377,7 @@ export class VUnitTestController {
                 .on('line', (line: string) => {
 
                     //check for success/failure of VUnit-TestCase
-                    this.MatchTestCaseStatus(line, node, run, runPyPath, showExecutionTime);
+                    this.MatchTestCaseStatus(line, node, run, vunitScriptPath, showExecutionTime);
 
                     //match VUnit-Errors
                     if(vscode.workspace.getConfiguration().get('vunit-by-hgb.matchProblems'))
@@ -434,15 +404,15 @@ export class VUnitTestController {
             vunitProcess = 0;
         })
         .catch((err) => {
-            run.errored(node, new vscode.TestMessage("Error in Execution of " + runPyPath));
+            run.errored(node, new vscode.TestMessage("Error in Execution of " + vunitScriptPath));
         });
 
     }
 
     private async RunVUnitTestsGUI(node: vscode.TestItem, request: vscode.TestRunRequest, run: vscode.TestRun) : Promise<void>
     {
-        //extract run.py path
-        const runPyPath = node.id.split('|')[0];
+        //extract path of VUnit-script
+        const vunitScriptPath = node.id.split('|')[0];
 
         //wildcard-appendix
         let wildcardAppendix : string = "";
@@ -470,20 +440,17 @@ export class VUnitTestController {
             options.push(vunitOptions as string);
         }
         
-        await this.mVUnit.Run(runPyPath, options, (vunit: ChildProcess) => { 
+        await this.mVUnit.Run(vunitScriptPath, options, (vunit: ChildProcess) => { 
             // handle cancellation of test-suite
             let disposable = run.token.onCancellationRequested(() => {
-                vunit.stdout?.destroy();
-                vunit.stdin?.destroy();
-                vunit.stderr?.destroy();
-                vunit.kill();
+                killProcess(vunit);
             });
             this.mContext.subscriptions.push(disposable);
         });
 
     }
 
-    private MatchTestCaseStatus(line : string, node : vscode.TestItem, run : vscode.TestRun, runPyPath : string, showExecutionTime : boolean) : void
+    private MatchTestCaseStatus(line : string, node : vscode.TestItem, run : vscode.TestRun, vunitScriptPath : string, showExecutionTime : boolean) : void
     {
         
         let testCaseMatcher : RegExp = cVunitTestEnd;
@@ -500,7 +467,7 @@ export class VUnitTestController {
             const testcaseName = result[2];
             const executionTime_ms = showExecutionTime ? (parseFloat(result[3]) * 1000) : undefined;
 
-            const testCaseItemId : string = getTestCaseItemId(runPyPath, testcaseName);
+            const testCaseItemId : string = getTestCaseItemId(vunitScriptPath, testcaseName);
             //get related test-item
             const item = this.findNode(testCaseItemId, node);
 
@@ -568,6 +535,67 @@ export class VUnitTestController {
             IsAssertionFailure = false;
         }
     }
+
+    private async HandleFileEvents() : Promise<void>
+    {
+        vscode.workspace.onDidCreateFiles((event) => 
+        {
+            const vunitScriptName : string | undefined = vscode.workspace.getConfiguration().get("vunit-by-hgb.scriptname");
+            
+            if(vunitScriptName)
+            {
+                const IsVUnitScript : boolean = event.files.some((file) => {
+                    const filePath = file.fsPath.toLowerCase();
+                    return filePath.endsWith(vunitScriptName);
+                });
+
+                if(IsVUnitScript)
+                {
+                    this.LoadTests();
+                }
+            }
+
+            
+        });
+
+        vscode.workspace.onDidDeleteFiles((event) => 
+        {
+            const vunitScriptName : string | undefined = vscode.workspace.getConfiguration().get("vunit-by-hgb.scriptname");
+            
+            if(vunitScriptName)
+            {
+                const IsVUnitScript : boolean = event.files.some((file) => {
+                    const filePath = file.fsPath.toLowerCase();
+                    return filePath.endsWith(vunitScriptName);
+                });
+
+                if(IsVUnitScript)
+                {
+                    this.LoadTests();
+                }
+            }
+        });
+
+        vscode.workspace.onDidRenameFiles((event) => 
+        {
+            const vunitScriptName : string | undefined = vscode.workspace.getConfiguration().get("vunit-by-hgb.scriptname");
+            
+            if(vunitScriptName)
+            {
+                const IsVUnitScript : boolean = event.files.some((file) => {
+                    const newFilePath = file.newUri.fsPath.toLowerCase();
+                    const oldFilePath = file.oldUri.fsPath.toLowerCase();
+                    return newFilePath.endsWith(vunitScriptName) || oldFilePath.endsWith(vunitScriptName);
+                });
+
+                if(IsVUnitScript)
+                {
+                    this.LoadTests();
+                }
+            }
+        });
+    }
+
 }
 
 
@@ -582,21 +610,26 @@ const mapTestItems = <T>(items: vscode.TestItemCollection, mapper: (t: vscode.Te
 	return result;
 };
 
-function getTestCaseItemId(runPyPath : string, testCaseName : string) : string
+function killProcess(process : ChildProcess) : void 
 {
-    const testCaseId : string = runPyPath.concat("|", testCaseName);
+    kill(process.pid);
+}
+
+function getTestCaseItemId(vunitScriptPath : string, testCaseName : string) : string
+{
+    const testCaseId : string = vunitScriptPath.concat("|", testCaseName);
     return testCaseId;
 }
 
-function getLibraryItemId(runPyPath : string, libraryName : string) : string 
+function getLibraryItemId(vunitScriptPath : string, libraryName : string) : string 
 {
-    const libraryItemId : string = runPyPath.concat("|", libraryName);
+    const libraryItemId : string = vunitScriptPath.concat("|", libraryName);
     return libraryItemId;
 }
 
-function getTestBenchItemId(runPyPath : string, libraryName : string, testBenchName : string) : string 
+function getTestBenchItemId(vunitScriptPath : string, libraryName : string, testBenchName : string) : string 
 {
-    const testBenchItemId : string = runPyPath.concat("|", libraryName, ".", testBenchName);
+    const testBenchItemId : string = vunitScriptPath.concat("|", libraryName, ".", testBenchName);
     return testBenchItemId;
 }
 
