@@ -45,15 +45,18 @@ The following configuration properties are available:
 
 Property                              | Description
 --------------------------------------|---------------------------------------------------------------
-`vunit-by-hgb.python`                 | Path to python executable.
-`vunit-by-hgb.shellOptions`           | VUnit run.py command line options when running tests.
-`vunit-by-hgb.guiOptions`             | VUnit run.py command line options when running GUI (-g should not be added here).
-`vunit-by-hgb.exportJsonOptions`             | VUnit run.py command line options when discovering test with --export-json.
-`vunit-by-hgb.matchProblems`          | Display Errors and Warnings from VUnit as Problems
-`vunit-by-hgb.matchAssertionFailure`  | Display Assertion-Failures from VUnit as Problems
+`vunit-by-hgb.scriptname`                   | consistent name of all VUnit-run-scripts (default: `run.py`)
+`vunit-by-hgb.python`                       | Path to python executable.
+`vunit-by-hgb.shellOptions`                 | VUnit run.py command line options when running tests.
+`vunit-by-hgb.guiOptions`                   | VUnit run.py command line options when running GUI (-g should not be added here).
+`vunit-by-hgb.exportJsonOptions`            | VUnit run.py command line options when discovering test with --export-json.
+`vunit-by-hgb.showExecutionTime`            | Display Execution-Time for every testcase
+`vunit-by-hgb.executeMultipleGuiTestcases`  | Executing multiple GUI-Testcases at once
+`vunit-by-hgb.matchProblems`                | Display Errors and Warnings from VUnit as Problems
+`vunit-by-hgb.matchAssertionFailure`        | Display Assertion-Failures from VUnit as Problems
 
 ## Related Projects
-- HDLRegression is an alternative to VUnit. Use [HDLRegressionByHGB](https://github.com/HSD-ESD/HDLRegression-by-HGB)to run HDLRegression tests from the VS-Code sidebar. (currently under development) 
+- HDLRegression is an alternative to VUnit. Use [HDLRegressionByHGB](https://github.com/HSD-ESD/HDLRegression-by-HGB) to run HDLRegression tests from the VS-Code sidebar. (currently under development) 
 
 ## License
 
