@@ -20,9 +20,11 @@ import * as fs from 'fs';
 
 import { VUnitTestController } from './VUnit/VUnitTestController';
 
-export async function activate(context: vscode.ExtensionContext) {
+let testController : VUnitTestController;
+
+export async function activate(context: vscode.ExtensionContext) : Promise<VUnitTestController> {
     
     //create instance of test-controller for VUnit
-    let testController : VUnitTestController = new VUnitTestController(context);
-    
+    testController = new VUnitTestController(context);
+    return testController;
 }
