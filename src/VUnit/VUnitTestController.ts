@@ -89,6 +89,11 @@ export class VUnitTestController {
 
         this.HandleFileEvents();
     }
+
+    public getContext() : vscode.ExtensionContext
+    {
+        return this.mContext;
+    }
     
     public async RunTests(
         shouldDebug: boolean,
