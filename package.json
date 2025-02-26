@@ -33,7 +33,9 @@
         "verilog",
         "system verilog",
         "test controller",
-        "test explorer"
+        "test explorer",
+        "Hagenberg",
+        "FH Hagenberg"
     ],
     "activationEvents": [
         "workspaceContains:**/run.py",
