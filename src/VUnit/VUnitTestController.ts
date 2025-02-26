@@ -17,7 +17,7 @@ import { ChildProcess } from "child_process";
 
 //TestBench-Status-Matcher
 const cVunitTestEnd : RegExp = /(pass|fail) \(.*\) (.*) \(.*\)/;
-const cVunitTimedTestEnd : RegExp = /(pass|fail) \(.*\) (.*) \((\d+(?:\.\d+)?) seconds\)/;
+const cVunitTimedTestEnd : RegExp = /(pass|fail) \(.*\) (.*) \((\d+(?:\.\d+)?) (seconds|s)\)/;
 const cVunitTestStart : RegExp = /Starting (.*)/;
 const cVunitStopped : RegExp = /Stopped at ([^\s]+) line (\d+)/;
 
