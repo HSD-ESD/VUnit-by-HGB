@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.0.5] - 2025-03-12
+- VUnit-v5: support for new console-output-format
+
 ## [1.0.4] - 2023-11-24
 - Bug-Fix: cancellation-request not working properly
 - Feature: execution-time of testcases
