@@ -366,10 +366,10 @@ export class VUnitTestController {
 
             // append output to testcase
             vunit.stdout?.on('data', (data : string) => {
-                run.appendOutput(data);
+                run.appendOutput(data.toString().replace(/\r?\n/g, '\r\n'));
             });
             vunit.stderr?.on('data', (data : string) => {
-                run.appendOutput(data);
+                run.appendOutput(data.toString().replace(/\r?\n/g, '\r\n'));
             });
             
             vunitProcess = vunit;
