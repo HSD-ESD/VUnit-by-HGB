@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.0.6] - 2026-06-09
+- Fix: normalized line endings for test output
+
 ## [1.0.5] - 2025-03-12
 - VUnit-v5: support for new console-output-format
 
