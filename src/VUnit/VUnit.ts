@@ -66,7 +66,7 @@ export class VUnit {
                 .then(() => {
                     if(version)
                     {
-                        resolve(version); 
+                        resolve(version);
                     }
                 })
                 .catch((err) => {
@@ -75,7 +75,7 @@ export class VUnit {
         });
     }
 
-    public async FindScripts(workspaceFolder : vscode.WorkspaceFolder): Promise<string[]> 
+    public async FindScripts(workspaceFolder : vscode.WorkspaceFolder): Promise<string[]>
     {
         const vunitScriptName : string | undefined = vscode.workspace.getConfiguration().get("vunit-by-hgb.scriptname");
         let vunitScripts: string[] = new Array<string>();
@@ -116,9 +116,13 @@ export class VUnit {
                 } else if (!fs.existsSync(vunitScript)) {
                     return reject(Error(`VUnit run script ${vunitScript} does not exist.`));
                 }
-                const python = vscode.workspace
+                const workspaceRoot = this.GetWorkspaceRoot() as string;
+                const rawPython = vscode.workspace
                     .getConfiguration()
                     .get('vunit-by-hgb.python') as string;
+                const python = path.isAbsolute(rawPython)
+                    ? rawPython
+                    : path.resolve(workspaceRoot, rawPython);
                 const args = ['"' + vunitScript + '"'].concat(vunitArgs);
                 this.mOutputChannel.appendLine('');
                 this.mOutputChannel.appendLine('===========================================');
@@ -158,7 +162,7 @@ export class VUnit {
     public async GetData(workDir: string, vunitScript:string): Promise<VunitExportData> {
         const vunitJson = path.join(workDir, `${uuid()}.json`);
         fs.mkdirSync(path.dirname(vunitJson), { recursive: true });
-    
+
         let vunitData: VunitExportData = cEmptyVunitExportData;
         let options = ['--list', `--export-json ${vunitJson}`];
         const vunitExportJsonOptions = vscode.workspace
@@ -173,7 +177,7 @@ export class VUnit {
         await this.Run(vunitScript, options, (vunit: ChildProcess) => {
 
             vunitProcess = vunit;
-            
+
             readline
                 .createInterface({
                     input: vunitProcess.stdout,
@@ -181,9 +185,9 @@ export class VUnit {
                 })
                 .on('line', (line: string) => {
                     //TODO: check for python errors
-                    
+
                 });
-            
+
             })
             .then(() => {
                 vunitData = JSON.parse(fs.readFileSync(vunitJson, 'utf-8'));
@@ -205,7 +209,7 @@ export class VUnit {
     }
 
     public MatchProblems(line : string, diagnosticCollection : vscode.DiagnosticCollection) : void
-    {   
+    {
         const match = cVunitProblemMatcher.exec(line);
         if (match) {
             const file = match[cVunitProblemMatcher_FileIndex];
@@ -218,9 +222,9 @@ export class VUnit {
             const range = new vscode.Range(new vscode.Position(lineNum - 1, columnNum - 1), new vscode.Position(lineNum - 1, columnNum));
             const diagnostic = new vscode.Diagnostic(range, message, diagnosticSeverity);
             diagnostic.source = "VUnit";
-            
+
             // check for existing diagnostics for this file
-            if (diagnosticCollection.has(vscode.Uri.file(file))) 
+            if (diagnosticCollection.has(vscode.Uri.file(file)))
             {
                 const currentDiagnostics = diagnosticCollection.get(vscode.Uri.file(file));
 
@@ -229,8 +233,8 @@ export class VUnit {
                     const updatedDiagnostics = currentDiagnostics.concat(diagnostic);
                     diagnosticCollection.set(vscode.Uri.file(file), updatedDiagnostics);
                 }
-            } 
-            else 
+            }
+            else
             {
                 // if no existing diagnostics, add a new diagnostic
                 diagnosticCollection.set(vscode.Uri.file(file), [diagnostic]);
